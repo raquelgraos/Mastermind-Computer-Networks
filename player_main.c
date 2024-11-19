@@ -36,9 +36,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    printf("ip: %s\n", GSIP);
-    printf("port: %s\n", GSport);
-
     char buffer[BUFSIZ];
     char command_line[BUFSIZ];
     char *command;
