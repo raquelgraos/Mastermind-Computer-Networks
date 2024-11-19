@@ -1,6 +1,7 @@
 #include "parser.h"
+#include "commands.h"
 
-int parse_start_command(char buffer[BUFSIZ], char PLID[7]) {
+int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
     char *PLID_aux;
     char *max_time;
     char *command;
@@ -30,7 +31,7 @@ int parse_start_command(char buffer[BUFSIZ], char PLID[7]) {
         } else strcpy(max_time_padded, max_time);
 
         return 0;
-        //if (!start_command(PLID, max_time_padded)) return 0;
+        //if (!start_c(GSIP, GSport, PLID, max_time_padded)) return 0;
     }
 }
 
@@ -38,7 +39,7 @@ bool is_valid_color(char c) {
     return c == 'R' || c == 'G' || c == 'B' || c == 'Y' || c == 'O' || c == 'P';
 }
 
-int parse_try_command(char buffer[BUFSIZ], char PLID[7], int n_trials) {
+int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7], int n_trials) {
     char *args[5];
     char *arg;
     int i = 0;
@@ -65,10 +66,10 @@ int parse_try_command(char buffer[BUFSIZ], char PLID[7], int n_trials) {
     c4 = args[4][0];
 
     return 0;
-    // if (!try_command(PLID, c1, c2, c3, c4, n_trials)) return 0;
+    // if (!try_c(GSIP, GSport, PLID, c1, c2, c3, c4, n_trials)) return 0;
 }
 
-int parse_debug_command(char buffer[BUFSIZ], char PLID[7]) {
+int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
     char *args[7];
     char *arg;
     int i = 0;
@@ -110,6 +111,6 @@ int parse_debug_command(char buffer[BUFSIZ], char PLID[7]) {
         } else strcpy(max_time_padded, args[2]);
 
         return 0;
-        //if (!debug_command(PLID, max_time_padded, c1, c2, c3, c4)) return 0;
+        //if (!debug_c(GSIP, GSport, PLID, max_time_padded, c1, c2, c3, c4)) return 0;
     }
 }

@@ -36,8 +36,6 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    printf("ip: %s\nport:%s\n", GSIP, GSport);
-
     char buffer[BUFSIZ];
     char command_line[BUFSIZ];
     char *command;
@@ -51,7 +49,7 @@ int main(int argc, char *argv[]) {
             int res;
 
             if (!strcmp(command, "start")) {
-                res = parse_start_command(command_line, PLID);
+                res = parse_start_command(GSIP, GSport, command_line, PLID);
                 if (res == 0) fprintf(stdout, "success\n");
                 else if (res == 1)
                     fprintf(stderr, "Error: PLID must be 6 digits.\n");
@@ -61,7 +59,7 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
 
             } else if (!strcmp(command, "try")) {
-                res = parse_try_command(command_line, PLID, n_trials);
+                res = parse_try_command(GSIP, GSport, command_line, PLID, n_trials);
                 if (res == 0) {
                     n_trials++;
                     fprintf(stdout, "success\n");
@@ -83,7 +81,7 @@ int main(int argc, char *argv[]) {
                 //if (!exit(PLID))
 
             } else if (!strcmp(command, "debug")) {
-                res = parse_debug_command(command_line, PLID);
+                res = parse_debug_command(GSIP, GSport, command_line, PLID);
                 if (res == 0) fprintf(stdout, "success\n");
                 else if (res == 1)
                     fprintf(stderr, "Error: PLID must be 6 digits.\n");

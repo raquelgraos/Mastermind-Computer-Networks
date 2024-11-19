@@ -4,7 +4,7 @@ CFLAGS = -Wall -Wextra -std=c11
 
 TARGET = player
 
-SRCS = player_main.c parser.c
+SRCS = player_main.c parser.c commands.c
 
 OBJS = $(SRCS:.c=.o)
 
