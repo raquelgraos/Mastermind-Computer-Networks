@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
 
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-n")) {
-            if (i + 1 < argc) 
+            if (i + 1 < argc && strcmp(argv[i + 1], "-p")) 
                 GSIP = argv[++i];
             else {
                 fprintf(stderr, "Error: missing argument for -n.\n");
@@ -35,6 +35,8 @@ int main(int argc, char *argv[]) {
             return EXIT_FAILURE;
         }
     }
+
+    printf("ip: %s\nport:%s\n", GSIP, GSport);
 
     char buffer[BUFSIZ];
     char command_line[BUFSIZ];
