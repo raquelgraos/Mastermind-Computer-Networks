@@ -5,12 +5,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]);
 int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7], int n_trials);
 int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]);
 
 bool is_valid_color(char c);
+bool is_valid_PLID(char *PLID);
 
 
 #endif

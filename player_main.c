@@ -37,13 +37,15 @@ int main(int argc, char *argv[]) {
     }
 
     char buffer[BUFSIZ];
-    char command_line[BUFSIZ];
+    char input[BUFSIZ];
+    char *command_line;
     char *command;
     int n_trials = 0;
     char PLID[7];
     
     while (1) {
-        if (fgets(command_line, sizeof(command_line), stdin) != NULL) {
+        if (fgets(input, sizeof(input), stdin) != NULL) {
+            command_line = strtok(input, "\n");
             strcpy(buffer, command_line);
             command = strtok(buffer, " ");
             int res;
@@ -52,7 +54,7 @@ int main(int argc, char *argv[]) {
                 res = parse_start_command(GSIP, GSport, command_line, PLID);
                 if (res == 0) fprintf(stdout, "success\n");
                 else if (res == 1)
-                    fprintf(stderr, "Error: PLID must be 6 digits.\n");
+                    fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
                 else if (res == 2)
                     fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
                 else if (res == 3)
@@ -68,25 +70,25 @@ int main(int argc, char *argv[]) {
                 else if (res == 3)
                     fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
 
-            } else if (!strcmp(command, "show_trials\n") || !strcmp(command, "st\n")) {
+            } else if (!strcmp(command, "show_trials") || !strcmp(command, "st\n")) {
                 //if (!show_trials(PLID))
                 
-            } else if (!strcmp(command, "scoreboard\n") || !strcmp(command, "sb\n")) {
+            } else if (!strcmp(command, "scoreboard") || !strcmp(command, "sb\n")) {
                 //if (!show_scoreboard())
 
-            } else if (!strcmp(command, "quit\n")) {
+            } else if (!strcmp(command, "quit")) {
                 //if (!quit(PLID))
 
-            } else if (!strcmp(command, "exit\n")) {
+            } else if (!strcmp(command, "exit")) {
                 //if (!exit(PLID))
 
             } else if (!strcmp(command, "debug")) {
                 res = parse_debug_command(GSIP, GSport, command_line, PLID);
                 if (res == 0) fprintf(stdout, "success\n");
                 else if (res == 1)
-                    fprintf(stderr, "Error: PLID must be 6 digits.\n");
+                    fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
                 else if (res == 2)
-                    fprintf(stderr, "Error: max_playtime musn't exceed 600 seconds.\n");
+                    fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
                 else if (res == 3)
                     fprintf(stderr, "Error: Debug Command requires 6 arguments.\n");
                 else if (res == 4)

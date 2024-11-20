@@ -11,15 +11,14 @@ int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     PLID_aux = strtok(NULL, " ");
     if (PLID_aux == NULL) return 3; // missing PLID arg
 
-    max_time_str = strtok(NULL, "\n");
+    max_time_str = strtok(NULL, "");
     if (max_time_str == NULL) return 3; // missing max_time arg
 
     char max_time_padded[4];
     int max_time = atoi(max_time_str);
-    int len_plid = strlen(PLID_aux);
     int len_time = strlen(max_time_str);
 
-    if (len_plid != 6) return 1; // invalid PLID
+    if (!is_valid_PLID(PLID_aux)) return 1; // invalid PLID
     else if (max_time > 600 || max_time < 0) return 2; // invalid max_time
     else {
         strcpy(PLID, PLID_aux);
@@ -36,10 +35,6 @@ int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     }
 }
 
-bool is_valid_color(char c) {
-    return c == 'R' || c == 'G' || c == 'B' || c == 'Y' || c == 'O' || c == 'P';
-}
-
 int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7], int n_trials) {
     char *args[5];
     char *arg;
@@ -48,16 +43,17 @@ int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7
     arg = strtok(buffer, " ");
     while (arg != NULL && i < 5) {
         args[i++] = arg;
-        if (i < 4) arg = strtok(NULL, " ");
-        else arg = strtok(NULL, "\n");
+        arg = strtok(NULL, " ");
     }
 
-    if (i != 5) return 3;
+    // if arg isn't NULL or i != 5 there are too many/few args, respectively
+    if (arg != NULL || i != 5) return 3;
 
     for (int j = 1; j < 5; j++) {
         if (strlen(args[j]) != 1 || !is_valid_color(args[j][0])) {
             return 1; // invalid colour
         }
+        else printf("color %d: %s\n", j, args[j]);
     }
 
     char c1, c2, c3, c4;
@@ -78,10 +74,11 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     arg = strtok(buffer, " ");
     while (arg != NULL && i < 7) {
         args[i++] = arg;
-        if (i < 6) arg = strtok(NULL, " ");
-        else arg = strtok(NULL, "\n");
+        arg = strtok(NULL, " ");
     }
-    if (i != 7) return 3; // missing arguments
+
+    // if arg isn't NULL or i != 7 there are too many/few args, respectively
+    if (arg != NULL || i != 7) return 3;
 
     for (int j = 3; j < 7; j++) {
         if (strlen(args[j]) != 1 || !is_valid_color(args[j][0])) {
@@ -96,11 +93,11 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     c4 = args[6][0];
 
     char max_time_padded[4];
-    int len_plid = strlen(args[1]);
     int len_time = strlen(args[2]);
+    int max_time = atoi(args[2]);
 
-    if (len_plid != 6) return 1; // invalid PLID
-    else if (atoi(args[2]) > 600) return 2; // invalid max_time
+    if (!is_valid_PLID(args[1])) return 1; // invalid PLID
+    else if (max_time > 600 || max_time < 0) return 2; // invalid max_time
     else {
         strcpy(PLID, args[1]);
         if (len_time == 1) {
@@ -114,4 +111,16 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
         return 0;
         //if (!debug_c(GSIP, GSport, PLID, max_time_padded, c1, c2, c3, c4)) return 0;
     }
+}
+
+bool is_valid_color(char c) {
+    return c == 'R' || c == 'G' || c == 'B' || c == 'Y' || c == 'O' || c == 'P';
+}
+
+bool is_valid_PLID(char *PLID) {
+    if (strlen(PLID) != 6) return false;
+
+    for (int i = 0; i < 6; i++)
+        if (!isdigit(PLID[i])) return false;
+    return true;
 }
