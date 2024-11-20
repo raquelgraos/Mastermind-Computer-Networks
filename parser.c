@@ -15,17 +15,16 @@ int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     if (max_time_str == NULL) return 3; // missing max_time arg
 
     char max_time_padded[4];
-    int max_time = atoi(max_time_str);
-    int len_time = strlen(max_time_str);
+    int len_max_time = strlen(max_time_str);
 
     if (!is_valid_PLID(PLID_aux)) return 1; // invalid PLID
-    else if (max_time > 600 || max_time < 0) return 2; // invalid max_time
+    else if (!is_valid_max_time(max_time_str, len_max_time)) return 2; // invalid max_time
     else {
         strcpy(PLID, PLID_aux);
-        if (len_time == 1) {
+        if (len_max_time == 1) {
             strcpy(max_time_padded, "00");
             strcat(max_time_padded, max_time_str);
-        } else if (len_time == 2) {
+        } else if (len_max_time == 2) {
             strcpy(max_time_padded, "0");
             strcat(max_time_padded, max_time_str);
         } else strcpy(max_time_padded, max_time_str);
@@ -53,7 +52,6 @@ int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7
         if (strlen(args[j]) != 1 || !is_valid_color(args[j][0])) {
             return 1; // invalid colour
         }
-        else printf("color %d: %s\n", j, args[j]);
     }
 
     char c1, c2, c3, c4;
@@ -93,17 +91,16 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     c4 = args[6][0];
 
     char max_time_padded[4];
-    int len_time = strlen(args[2]);
-    int max_time = atoi(args[2]);
+    int len_max_time = strlen(args[2]);
 
     if (!is_valid_PLID(args[1])) return 1; // invalid PLID
-    else if (max_time > 600 || max_time < 0) return 2; // invalid max_time
+    else if (!is_valid_max_time(args[2], len_max_time)) return 2; // invalid max_time
     else {
         strcpy(PLID, args[1]);
-        if (len_time == 1) {
+        if (len_max_time == 1) {
             strcpy(max_time_padded, "00");
             strcat(max_time_padded, args[2]);
-        } else if (len_time == 2) {
+        } else if (len_max_time == 2) {
             strcpy(max_time_padded, "0");
             strcat(max_time_padded, args[2]);
         } else strcpy(max_time_padded, args[2]);
@@ -123,4 +120,16 @@ bool is_valid_PLID(char *PLID) {
     for (int i = 0; i < 6; i++)
         if (!isdigit(PLID[i])) return false;
     return true;
+}
+
+bool is_valid_max_time(char *max_time_str, int len_max_time) {
+    if (len_max_time > 3) return false;
+
+    for (int i = 0; i < len_max_time; i++) {
+        if (!isdigit(max_time_str[i])) return false;
+    }
+
+    int max_time = atoi(max_time_str);
+    if (max_time <= 0 || max_time > 600) return false;
+    else return true;
 }

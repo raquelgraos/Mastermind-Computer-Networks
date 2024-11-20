@@ -13,6 +13,7 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
 
 bool is_valid_color(char c);
 bool is_valid_PLID(char *PLID);
+bool is_valid_max_time(char *max_time_str, int len_max_time);
 
 
 #endif
