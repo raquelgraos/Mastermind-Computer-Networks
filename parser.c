@@ -3,7 +3,7 @@
 
 int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
     char *PLID_aux;
-    char *max_time;
+    char *max_time_str;
     char *command;
 
     command = strtok(buffer, " ");
@@ -11,24 +11,25 @@ int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     PLID_aux = strtok(NULL, " ");
     if (PLID_aux == NULL) return 3; // missing PLID arg
 
-    max_time = strtok(NULL, "\n");
-    if (max_time == NULL) return 3; // missing max_time arg
+    max_time_str = strtok(NULL, "\n");
+    if (max_time_str == NULL) return 3; // missing max_time arg
 
     char max_time_padded[4];
+    int max_time = atoi(max_time_str);
     int len_plid = strlen(PLID_aux);
-    int len_time = strlen(max_time);
+    int len_time = strlen(max_time_str);
 
     if (len_plid != 6) return 1; // invalid PLID
-    else if (atoi(max_time) > 600) return 2; // invalid max_time
+    else if (max_time > 600 || max_time < 0) return 2; // invalid max_time
     else {
         strcpy(PLID, PLID_aux);
         if (len_time == 1) {
             strcpy(max_time_padded, "00");
-            strcat(max_time_padded, max_time);
+            strcat(max_time_padded, max_time_str);
         } else if (len_time == 2) {
             strcpy(max_time_padded, "0");
-            strcat(max_time_padded, max_time);
-        } else strcpy(max_time_padded, max_time);
+            strcat(max_time_padded, max_time_str);
+        } else strcpy(max_time_padded, max_time_str);
 
         return 0;
         //if (!start_c(GSIP, GSport, PLID, max_time_padded)) return 0;

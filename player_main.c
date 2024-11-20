@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
                 else if (res == 1)
                     fprintf(stderr, "Error: PLID must be 6 digits.\n");
                 else if (res == 2)
-                    fprintf(stderr, "Error: max_playtime musn't exceed 600 seconds.\n");
+                    fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
                 else if (res == 3)
                     fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
 
