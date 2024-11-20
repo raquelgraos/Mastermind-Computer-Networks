@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Error: Invalid colour.\n");
 
             } else {
-                fprintf(stderr, "Error: invalid command");
+                fprintf(stderr, "Error: invalid command.\n");
             }
 
         } else {
