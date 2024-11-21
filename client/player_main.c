@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
             else {
                 fprintf(stderr, "Error: missing argument for -n.\n");
                 print_usage(argv[0]);
-                return EXIT_FAILURE;
+                return 1;
             }
         } else if (!strcmp(argv[i], "-p")) {
             if (i + 1 < argc) 
@@ -27,12 +27,12 @@ int main(int argc, char *argv[]) {
             else {
                 fprintf(stderr, "Error: missing argument for -p.\n");
                 print_usage(argv[0]);
-                return EXIT_FAILURE;
+                return 1;
             }
         } else {
             fprintf(stderr, "Error: Unknown argument '%s'.\n", argv[i]);
             print_usage(argv[0]);
-            return EXIT_FAILURE;
+            return 1;
         }
     }
 
@@ -70,17 +70,17 @@ int main(int argc, char *argv[]) {
                 else if (res == 3)
                     fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
 
-            } else if (!strcmp(command, "show_trials") || !strcmp(command, "st\n")) {
-                //if (!show_trials(PLID))
+            } else if (!strcmp(command, "show_trials") || !strcmp(command, "st")) {
+                if (!show_trials_c(GSIP, GSport, PLID)) fprintf(stdout, "success\n");
                 
-            } else if (!strcmp(command, "scoreboard") || !strcmp(command, "sb\n")) {
-                //if (!show_scoreboard())
+            } else if (!strcmp(command, "scoreboard") || !strcmp(command, "sb")) {
+                if (!show_sb_c(GSIP, GSport)) fprintf(stdout, "success\n");
 
             } else if (!strcmp(command, "quit")) {
-                //if (!quit(PLID))
+                if (!quit_c(GSIP, GSport, PLID)) fprintf(stdout, "success\n");
 
             } else if (!strcmp(command, "exit")) {
-                //if (!exit(PLID))
+                // if (!exit(PLID))
 
             } else if (!strcmp(command, "debug")) {
                 res = parse_debug_command(GSIP, GSport, command_line, PLID);
@@ -98,8 +98,6 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "Error: invalid command.\n");
             }
 
-        } else {
-            fprintf(stderr, "Error: fgets() failed.\n");
-        }
+        } else fprintf(stderr, "Error: fgets() failed.\n");
     }
 }

@@ -4,7 +4,7 @@ CFLAGS = -Wall -Wextra -std=c11
 
 TARGET = player
 
-SRCS = player_main.c parser.c commands.c
+SRCS = client/player_main.c client/parser.c client/handler.c
 
 OBJS = $(SRCS:.c=.o)
 
@@ -18,4 +18,3 @@ $(TARGET): $(OBJS)
 
 clean:
 	rm -f $(OBJS) $(TARGET)
-
