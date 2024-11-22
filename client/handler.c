@@ -1,6 +1,8 @@
 #include "handler.h"
+#include "parser.h"
+#include "connections.h"
 
-int start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded) {
+void start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded) {
     
     char OP_CODE[CODE_SIZE] = "SNG";
 
@@ -25,9 +27,52 @@ int start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded) {
     memcpy(ptr, "\n", sizeof(char));
     ptr += sizeof(char);
 
-    printf("%s", message);
+    //printf("%s", message);
+
+    start_r(GSIP, GSport, message);
+}
+
+void start_r(char *GSIP, char *GSport, char *message) {
     
-    return 0; // success
+    char msg_received[128];
+    if (udp_conn(GSIP, GSport, message, msg_received)) {
+        fprintf(stderr, "Error: Couldn't connect to UDP.\n");
+        return;
+    }
+
+    printf("messaged received in handler: %s", msg_received);
+    
+    int n_args = 2;
+    char **args = NULL;
+
+    int res = deparse_buffer(msg_received, &args, n_args);
+    /*for (int i = 0; i < n_args; i++) {
+        printf("arg %d: %s\n", i, args[i]);
+    }*/
+
+    if (res == 0) {
+        if (args[1] != NULL && !strcmp(args[1], "OK")) {
+            fprintf(stdout, "Game started successfully.\n");
+            //outra coisa eventualmente
+        } 
+        else if (args[1] != NULL && !strcmp(args[1], "NOK"))
+            fprintf(stderr, "There is already an ongoing game.\n");
+        // o stor tinha dito para fazermos a verificacao dos args na parte do cliente ou seja isto nunca acontecerá como eu fiz (?)
+        else if (args[1] != NULL && !strcmp(args[1], "ERR"))
+            fprintf(stderr, "Invalid syntax.\n");
+        else 
+            fprintf(stderr, "Unknown status: %s.\n", args[1]);
+
+    } else if (res == 1)
+        fprintf(stderr, "Error: memory allocation failed.\n");
+    else if (res == 2)
+        fprintf(stderr, "Error: received invalid message.\n");
+
+    for (int i = 0; i < n_args; i++) {
+        if (args[i] != NULL) free(args[i]);
+    }
+    free(args);
+
 }
 
 int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials) {
@@ -64,11 +109,74 @@ int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials) {
     memcpy(ptr, "\n", sizeof(char));
     ptr += sizeof(char);
 
-    printf("%s", message);
-    return 0; // success
+    //printf("%s", message);
+
+    return (try_r(GSIP, GSport, message));
 }
 
-int show_trials_c(char *GSIP, char *GSport, char *PLID) {
+int try_r(char *GSIP, char *GSport, char *message) {
+
+    char msg_received[128];
+    if (udp_conn(GSIP, GSport, message, msg_received)) {
+        fprintf(stderr, "Error: Couldn't connect to UDP.\n");
+        return 1;
+    }
+
+    printf("message received in handler: %s", msg_received);
+  
+    int max_n_args = 9;
+    char **args = NULL;
+
+    int res = deparse_buffer(msg_received, &args, max_n_args);
+    for (int i = 0; args[i] != NULL; i++) {
+        printf("try arg %d: %s\n", i, args[i]);
+    }
+
+    int args_counter = 0;
+    while (args[args_counter] != NULL) args_counter++;
+
+    if (res == 0) {
+        if (args[1] != NULL && !strcmp(args[1], "OK")) {
+            fprintf(stdout, "Valid trial.\n");
+            if (args_counter == 5 && atoi(args[3]) == 4) 
+                fprintf(stdout, "You won!\n"); //return something
+            //if (condicao em que nao aumenta){frees and return !=0}
+            for (int i = 0; args[i] != NULL; i++) free(args[i]);
+            free(args);
+            return 0;
+        } 
+        else if (args[1] != NULL && !strcmp(args[1], "DUP")) 
+            fprintf(stdout, "Repeated guess.\n");
+        else if (args[1] != NULL && !strcmp(args[1], "INV"))
+            fprintf(stderr, "Não percebo este erro lol\n");
+        else if (args[1] != NULL && !strcmp(args[1], "NOK"))
+            fprintf(stdout, "Trial is out of context.\n");
+        else if (args[1] != NULL && !strcmp(args[1], "ENT")) {
+            fprintf(stdout, "No more attempts available.\n");
+            //reveal secret key and end game
+        }
+        else if (args[1] != NULL && !strcmp(args[1], "EMT")) {
+            fprintf(stdout, "Maximum playtime has been exceeded.\n");
+            //reveal secret key and end game
+        }
+        else if (args[1] != NULL && !strcmp(args[1], "ERR"))
+            fprintf(stderr, "Invalid syntax.\n");
+        else
+            fprintf(stderr, "Unknown status: %s.\n", args[1]);
+
+    } else if (res == 1)
+        fprintf(stderr, "Error: memory allocation failed.\n");
+    else if (res == 2 || (args_counter != 2 && args_counter != 5 && args_counter != 9))
+        fprintf(stderr, "Error: received invalid message.\n");
+
+    for (int i = 0; i < (args[i] != NULL); i++) {
+        free(args[i]);
+    }
+    free(args);
+    return 4; //codigo ainda nao usado
+}
+
+void show_trials_c(char *GSIP, char *GSport, char *PLID) {
 
     char OP_CODE[CODE_SIZE] = "STR";
 
@@ -88,11 +196,14 @@ int show_trials_c(char *GSIP, char *GSport, char *PLID) {
     ptr += sizeof(char);
 
     printf("%s", message);
-    
-    return 0; // success
+    //show_trials_r(GSIP, GSport, message);
 }
 
-int show_sb_c(char *GSIP, char *GSport) {
+/*void show_trials_r(char *GSIP, char *GSport, char *message) {
+
+}*/
+
+void show_sb_c(char *GSIP, char *GSport) {
 
     char OP_CODE[CODE_SIZE] = "SSB";
 
@@ -106,10 +217,14 @@ int show_sb_c(char *GSIP, char *GSport) {
     ptr += sizeof(char);
 
     printf("%s", message);
-    return 0; // success
+    //show_sb_r(GSIP, GSport, message);
 }
 
-int quit_c(char *GSIP, char *GSport, char *PLID) {
+/*void show_sb_r(char *GSIP, char *GSport, char *message) {
+
+}*/
+
+void quit_c(char *GSIP, char *GSport, char *PLID) {
 
     char OP_CODE[CODE_SIZE] = "QUT";
 
@@ -129,15 +244,55 @@ int quit_c(char *GSIP, char *GSport, char *PLID) {
     ptr += sizeof(char);
 
     printf("%s", message);
-    return 0; // success
+    quit_r(GSIP, GSport, message);
 }
 
-int exit_c(char *GSIP, char *GSport) {
+void quit_r(char *GSIP, char *GSport, char *message) {
+    
+    char msg_received[128];
+    if (udp_conn(GSIP, GSport, message, msg_received)) {
+        fprintf(stderr, "Error: Couldn't connect to UDP.\n");
+        return;
+    }
 
-    return 0; // success
+    printf("buffer received: %s\n", msg_received);
+    
+    int max_n_args = 6;
+    char **args = NULL;
+
+    int res = deparse_buffer(msg_received, &args, max_n_args);
+    /*for (int i = 0; i < n_args; i++) {
+        printf("arg %d: %s\n", i, args[i]);
+    }*/
+
+    int args_counter = 0;
+    while (args[args_counter] != NULL) args_counter++;
+
+    if (res == 0) {
+        if (args[1] != NULL && !strcmp(args[1], "OK")) {
+            fprintf(stdout, "Game ended successfully.\n");
+            //revelar secret key e sair do jogo
+        } 
+        else if (args[1] != NULL && !strcmp(args[1], "NOK")) 
+            fprintf(stderr, "No ongoing game.\n");
+        else if (args[1] != NULL && !strcmp(args[1], "ERR")) 
+            fprintf(stderr, "Invalid syntax.\n");
+        else fprintf(stderr, "Unknown status: %s.\n", args[1]);
+
+    } else if (res == 1) 
+        fprintf(stderr, "Error: memory allocation failed.\n");
+    else if (res == 2 || (args_counter != 2 && args_counter != 6))
+        fprintf(stderr, "Error: received invalid message.\n");
+
+    for (int i = 0; args[i] != NULL; i++) {
+        free(args[i]);
+    }
+    free(args);
 }
 
-int debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* args[7]){
+//void exit_c(char *GSIP, char *GSport) {}
+
+void debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* args[7]){
 
     char OP_CODE[CODE_SIZE] = "STR";
 
@@ -171,5 +326,46 @@ int debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* a
     }
 
     printf("%s", message);
-    return 0; // success
+    debug_r(GSIP, GSport, message);
+}
+
+void debug_r(char *GSIP, char *GSport, char *message) {
+    
+    char msg_received[128];
+    if (udp_conn(GSIP, GSport, message, msg_received)) {
+        fprintf(stderr, "Error: Couldn't connect to UDP.\n");
+        return;
+    }
+
+    printf("buffer received: %s\n", msg_received);
+    
+    int n_args = 2;
+    char **args = NULL;
+
+    int res = deparse_buffer(msg_received, &args, n_args);
+    /*for (int i = 0; i < n_args; i++) {
+        printf("arg %d: %s\n", i, args[i]);
+    }*/
+
+    if (res == 0) {
+        if (args[1] != NULL && !strcmp(args[1], "OK")) {
+            fprintf(stdout, "Game started successfully.\n");
+            //something
+        } 
+        else if (args[1] != NULL && !strcmp(args[1], "NOK")) 
+            fprintf(stderr, "Already an ongoing game.\n");
+        else if (args[1] != NULL && !strcmp(args[1], "ERR")) 
+            fprintf(stderr, "Invalid syntax.\n");
+        else
+            fprintf(stderr, "Unknown status: %s.\n", args[1]);
+
+    } else if (res == 1) 
+        fprintf(stderr, "Error: memory allocation failed.\n");
+    else if (res == 2)
+        fprintf(stderr, "Error: received invalid message.\n");
+
+    for (int i = 0; args[i] != NULL; i++) {
+        free(args[i]);
+    }
+    free(args);
 }

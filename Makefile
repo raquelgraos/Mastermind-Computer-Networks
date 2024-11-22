@@ -1,10 +1,10 @@
 CC = gcc
 
-CFLAGS = -Wall -Wextra -std=c11
+CFLAGS = -Wall -Wextra -std=c11 -D_POSIX_C_SOURCE=200112L
 
 TARGET = player
 
-SRCS = client/player_main.c client/parser.c client/handler.c
+SRCS = client/player_main.c client/parser.c client/handler.c client/connections.c
 
 OBJS = $(SRCS:.c=.o)
 

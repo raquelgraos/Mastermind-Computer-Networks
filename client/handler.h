@@ -10,12 +10,24 @@
 #define TRIALS_SIZE 1 //max_trials = 8
 #define COLOURS_SIZE 4
 
-int start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded);
+void start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded);
+void start_r(char *GSIP, char *GSport, char *message);
+
 int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials);
-int show_trials_c(char *GSIP, char *GSport, char *PLID);
-int show_sb_c(char *GSIP, char *GSport);
-int quit_c(char *GSIP, char *GSport, char *PLID);
-int exit_c(char *GSIP, char *GSport);
-int debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* args[7]);
+int try_r(char *GSIP, char *GSport, char *message);
+
+void show_trials_c(char *GSIP, char *GSport, char *PLID);
+//void show_trials_r(char *GSIP, char *GSport, char *message);
+
+void show_sb_c(char *GSIP, char *GSport);
+//void show_sb_r(char *GSIP, char *GSport, char *message);
+
+void quit_c(char *GSIP, char *GSport, char *PLID);
+void quit_r(char *GSIP, char *GSport, char *message);
+
+//void exit_c(char *GSIP, char *GSport);
+
+void debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* args[7]);
+void debug_r(char *GSIP, char *GSport, char *message);
 
 #endif

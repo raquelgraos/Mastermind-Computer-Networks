@@ -52,8 +52,7 @@ int main(int argc, char *argv[]) {
 
             if (!strcmp(command, "start")) {
                 res = parse_start_command(GSIP, GSport, command_line, PLID);
-                if (res == 0) fprintf(stdout, "success\n");
-                else if (res == 1)
+                if (res == 1)
                     fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
                 else if (res == 2)
                     fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
@@ -62,30 +61,27 @@ int main(int argc, char *argv[]) {
 
             } else if (!strcmp(command, "try")) {
                 res = parse_try_command(GSIP, GSport, command_line, PLID, n_trials);
-                if (res == 0) {
-                    n_trials++;
-                    fprintf(stdout, "success\n");
-                } else if (res == 1)
+                if (res == 0) n_trials++;
+                else if (res == 1)
                     fprintf(stderr, "Error: Invalid colour.\n");
                 else if (res == 3)
                     fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
 
             } else if (!strcmp(command, "show_trials") || !strcmp(command, "st")) {
-                if (!show_trials_c(GSIP, GSport, PLID)) fprintf(stdout, "success\n");
+                show_trials_c(GSIP, GSport, PLID);
                 
             } else if (!strcmp(command, "scoreboard") || !strcmp(command, "sb")) {
-                if (!show_sb_c(GSIP, GSport)) fprintf(stdout, "success\n");
+                show_sb_c(GSIP, GSport);
 
             } else if (!strcmp(command, "quit")) {
-                if (!quit_c(GSIP, GSport, PLID)) fprintf(stdout, "success\n");
+                quit_c(GSIP, GSport, PLID);
 
             } else if (!strcmp(command, "exit")) {
-                // if (!exit(PLID))
+                // exit(PLID)
 
             } else if (!strcmp(command, "debug")) {
                 res = parse_debug_command(GSIP, GSport, command_line, PLID);
-                if (res == 0) fprintf(stdout, "success\n");
-                else if (res == 1)
+                if (res == 1)
                     fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
                 else if (res == 2)
                     fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");

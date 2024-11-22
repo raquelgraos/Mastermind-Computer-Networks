@@ -15,5 +15,7 @@ bool is_valid_color(char c);
 bool is_valid_PLID(char *PLID);
 bool is_valid_max_time(char *max_time_str, int len_max_time);
 
+int deparse_buffer(char *buffer, char ***args, int n_args);
+
 
 #endif

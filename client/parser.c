@@ -29,7 +29,8 @@ int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
             strcat(max_time_padded, max_time_str);
         } else strcpy(max_time_padded, max_time_str);
 
-        if (!start_c(GSIP, GSport, PLID, max_time_padded)) return 0;
+        start_c(GSIP, GSport, PLID, max_time_padded);
+        return 0;
     }
 }
 
@@ -53,7 +54,8 @@ int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7
         }
     }
 
-    if (!try_c(GSIP, GSport, PLID, args, n_trials)) return 0;
+    if (!try_c(GSIP, GSport, PLID, args, n_trials)) return 0; //n_trials can be increased
+    else return 1;
 }
 
 int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
@@ -91,7 +93,8 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
             strcat(max_time_padded, args[2]);
         } else strcpy(max_time_padded, args[2]);
 
-        if (!debug_c(GSIP, GSport, PLID, max_time_padded, args)) return 0;
+        debug_c(GSIP, GSport, PLID, max_time_padded, args);
+        return 0;
     }
 }
 
@@ -117,4 +120,33 @@ bool is_valid_max_time(char *max_time_str, int len_max_time) {
     int max_time = atoi(max_time_str);
     if (max_time <= 0 || max_time > 600) return false;
     else return true;
+}
+
+int deparse_buffer(char *message, char ***args, int n_args) {
+    printf("message received in deparser: %s", message);
+    
+    *args = (char**) malloc(n_args * sizeof(char *));
+    if (*args == NULL) return 1; // malloc error
+
+    int i = 0;
+    char *arg;
+    arg = strtok(message, " ");
+    while (arg != NULL && i < n_args) {
+        (*args)[i] = (char*) malloc(strlen(arg) * sizeof(char));
+        if ((*args)[i] == NULL) return 1; // malloc error
+        strcpy((*args)[i], arg);
+        /*printf("arg %d: %s\n", i, (*args)[i]);
+        printf("here: %s\n", arg);*/
+        arg = strtok(NULL, " ");
+        i += 1;
+    }
+    if (arg != NULL) return 2; // invalid number of arguments
+    else {
+        char aux[strlen((*args)[i-1])];
+        char *token;
+        strcpy(aux, (*args)[i-1]);
+        token = strtok(aux, "\n");
+        strcpy((*args)[i-1], token);
+    }
+    return 0;
 }
