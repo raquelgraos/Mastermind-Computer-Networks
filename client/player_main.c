@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
     char input[BUFSIZ];
     char *command_line;
     char *command;
-    int n_trials = 0;
+    int n_trials = 1; // the first trial is number 1
     char PLID[7];
     
     while (1) {
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
             } else if (!strcmp(command, "try")) {
                 res = parse_try_command(GSIP, GSport, command_line, PLID, n_trials);
                 if (res == 0) n_trials++;
-                else if (res == 1)
+                else if (res == 2) // specific return values for each error 
                     fprintf(stderr, "Error: Invalid colour.\n");
                 else if (res == 3)
                     fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
@@ -77,7 +77,9 @@ int main(int argc, char *argv[]) {
                 quit_c(GSIP, GSport, PLID);
 
             } else if (!strcmp(command, "exit")) {
-                // exit(PLID)
+                // exit(PLID) or maybe just needs to quit and return
+                quit_c(GSIP, GSport, PLID);
+                return 0;
 
             } else if (!strcmp(command, "debug")) {
                 res = parse_debug_command(GSIP, GSport, command_line, PLID);

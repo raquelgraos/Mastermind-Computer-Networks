@@ -50,7 +50,7 @@ int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7
 
     for (int j = 1; j < 5; j++) {
         if (strlen(args[j]) != 1 || !is_valid_color(args[j][0])) {
-            return 1; // invalid colour
+            return 2; // invalid colour (specific return valeus for specific errors)
         }
     }
 

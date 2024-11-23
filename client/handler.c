@@ -76,42 +76,44 @@ void start_r(char *GSIP, char *GSport, char *message) {
 }
 
 int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials) {
-    
     char OP_CODE[CODE_SIZE] = "TRY";
 
-    char message[(CODE_SIZE + PLID_SIZE + COLOURS_SIZE + TRIALS_SIZE + 7)*sizeof(char)];
+    // sizeof(char) = 1
+    char message[(CODE_SIZE + PLID_SIZE + COLOURS_SIZE + TRIALS_SIZE + 7)];
     char *ptr = message;
 
-    memcpy(ptr, OP_CODE, CODE_SIZE*sizeof(char));
-    ptr += CODE_SIZE*sizeof(char);
+    memcpy(ptr, OP_CODE, CODE_SIZE);
+    ptr += CODE_SIZE;
 
     memcpy(ptr, " ", sizeof(char));
-    ptr += sizeof(char);
+    ptr += 1;
 
-    memcpy(ptr, PLID, PLID_SIZE*sizeof(char));
-    ptr += PLID_SIZE*sizeof(char);
+    memcpy(ptr, PLID, PLID_SIZE);
+    ptr += PLID_SIZE;
 
     memcpy(ptr, " ", sizeof(char));
-    ptr += sizeof(char);
+    ptr += 1;
 
     for (int i = 1; i < 5; i++) {
-        memcpy(ptr, &args[i][0], sizeof(char));
-        ptr += sizeof(char);
-        memcpy(ptr, " ", sizeof(char));
-        ptr += sizeof(char);
+        memcpy(ptr, args[i], sizeof(char)); // N entendo pq fazias &args[i][0]
+        ptr += 1;
+        memcpy(ptr, " ", sizeof(char)); 
+        ptr += 1;
     }
 
     char n_trials_str[TRIALS_SIZE + 1];
     sprintf(n_trials_str, "%d", n_trials);
-    memcpy(ptr, &n_trials_str[0], sizeof(char));
-    ptr += sizeof(char);
+    memcpy(ptr, n_trials_str, strlen(n_trials_str)); // N entendo pq fazias &n_trials_str[0]
+    ptr += strlen(n_trials_str);
 
     memcpy(ptr, "\n", sizeof(char));
-    ptr += sizeof(char);
+    ptr += 1;
 
-    //printf("%s", message);
+    *ptr = '\0'; //ensures null termination
 
-    return (try_r(GSIP, GSport, message));
+    printf("Message to send: '%s'\n", message); 
+
+    return try_r(GSIP, GSport, message);
 }
 
 int try_r(char *GSIP, char *GSport, char *message) {
@@ -134,7 +136,7 @@ int try_r(char *GSIP, char *GSport, char *message) {
 
     int args_counter = 0;
     while (args[args_counter] != NULL) args_counter++;
-
+    
     if (res == 0) {
         if (args[1] != NULL && !strcmp(args[1], "OK")) {
             fprintf(stdout, "Valid trial.\n");
@@ -148,7 +150,7 @@ int try_r(char *GSIP, char *GSport, char *message) {
         else if (args[1] != NULL && !strcmp(args[1], "DUP")) 
             fprintf(stdout, "Repeated guess.\n");
         else if (args[1] != NULL && !strcmp(args[1], "INV"))
-            fprintf(stderr, "Não percebo este erro lol\n");
+            fprintf(stderr, "Não percebo este erro lol\n"); //TODO
         else if (args[1] != NULL && !strcmp(args[1], "NOK"))
             fprintf(stdout, "Trial is out of context.\n");
         else if (args[1] != NULL && !strcmp(args[1], "ENT")) {
