@@ -122,31 +122,40 @@ bool is_valid_max_time(char *max_time_str, int len_max_time) {
     else return true;
 }
 
+
 int deparse_buffer(char *message, char ***args, int n_args) {
     printf("message received in deparser: %s", message);
-    
-    *args = (char**) malloc(n_args * sizeof(char *));
+
+    *args = (char **)malloc((n_args + 1) * sizeof(char *)); // allocate space for n_args + 1 (for NULL).
     if (*args == NULL) return 1; // malloc error
 
     int i = 0;
-    char *arg;
-    arg = strtok(message, " ");
+    char *arg = strtok(message, " ");
     while (arg != NULL && i < n_args) {
-        (*args)[i] = (char*) malloc(strlen(arg) * sizeof(char));
-        if ((*args)[i] == NULL) return 1; // malloc error
+        (*args)[i] = (char *)malloc((strlen(arg) + 1) * sizeof(char)); // +1 for null-terminator.
+        if ((*args)[i] == NULL) {
+            for (int j = 0; j < i; j++) free((*args)[j]);
+            free(*args);
+            return 1; // malloc error
+        }
         strcpy((*args)[i], arg);
-        /*printf("arg %d: %s\n", i, (*args)[i]);
-        printf("here: %s\n", arg);*/
-        arg = strtok(NULL, " ");
-        i += 1;
+        i++;
+        arg = strtok(NULL, " "); 
     }
+    // null-terminate the array of arguments.
+    (*args)[i] = NULL;
     if (arg != NULL) return 2; // invalid number of arguments
-    else {
-        char aux[strlen((*args)[i-1])];
-        char *token;
-        strcpy(aux, (*args)[i-1]);
-        token = strtok(aux, "\n");
-        strcpy((*args)[i-1], token);
+    else{
+        // handle newline 
+        if (i > 0) {
+            char *last_arg = (*args)[i - 1];
+            size_t len = strlen(last_arg);
+            if (len > 0 && last_arg[len - 1] == '\n') {
+                last_arg[len - 1] = '\0'; // Remove the newline character.
+            }
+        }
     }
+
     return 0;
 }
+

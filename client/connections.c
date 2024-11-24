@@ -25,11 +25,11 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
 
     n = sendto(fd, message, msg_len, 0, res->ai_addr, res->ai_addrlen);
     if (n == -1) /*error*/ return 1; //exit(1);
-
+    
     addrlen = sizeof(addr);
     n = recvfrom(fd, buffer_aux, 128, 0, (struct sockaddr*) &addr, &addrlen);
     if (n == -1) /*error*/ return 1; //exit(1);
-    
+
     char *token = strtok(buffer_aux, "\n"); // acho que isto e desnecessario
     strcat(token, "\n");
     printf("message received in udp: %s", token);

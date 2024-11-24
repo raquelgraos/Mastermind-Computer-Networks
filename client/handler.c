@@ -118,8 +118,8 @@ int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials) {
     return try_r(GSIP, GSport, message);
 }
 
-int try_r(char *GSIP, char *GSport, char *message) {
 
+int try_r(char *GSIP, char *GSport, char *message) {
     char msg_received[128];
     if (udp_conn(GSIP, GSport, message, msg_received)) {
         fprintf(stderr, "Error: Couldn't connect to UDP.\n");
@@ -127,28 +127,27 @@ int try_r(char *GSIP, char *GSport, char *message) {
     }
 
     printf("message received in handler: %s", msg_received);
-  
+
     int max_n_args = 9;
     char **args = NULL;
 
     int res = deparse_buffer(msg_received, &args, max_n_args);
-    for (int i = 0; args[i] != NULL; i++) {
-        printf("try arg %d: %s\n", i, args[i]);
-    }
-
-    int args_counter = 0;
-    while (args[args_counter] != NULL) args_counter++;
-    
     if (res == 0) {
+        int args_counter = 0;
+        while (args[args_counter] != NULL) args_counter++;
+        printf("args_counter: %d\n", args_counter);
+
+        for (int i = 0; i < args_counter; i++) {
+            printf("try arg %d: %s\n", i, args[i]);
+        }
+
         if (args[1] != NULL && !strcmp(args[1], "OK")) {
             fprintf(stdout, "Valid trial.\n");
-            if (args_counter == 5 && atoi(args[3]) == 4) 
-                fprintf(stdout, "You won!\n"); //return something
-            //if (condicao em que nao aumenta){frees and return !=0}
+            if (args_counter == 5 && atoi(args[3]) == 4) fprintf(stdout, "You won!\n");
             for (int i = 0; args[i] != NULL; i++) free(args[i]);
             free(args);
             return 0;
-        } 
+        }
         else if (args[1] != NULL && !strcmp(args[1], "DUP")) 
             fprintf(stdout, "Repeated guess.\n");
         else if (args[1] != NULL && !strcmp(args[1], "INV"))
@@ -156,29 +155,37 @@ int try_r(char *GSIP, char *GSport, char *message) {
         else if (args[1] != NULL && !strcmp(args[1], "NOK"))
             fprintf(stdout, "Trial is out of context.\n");
         else if (args[1] != NULL && !strcmp(args[1], "ENT")) {
-            fprintf(stdout, "No more attempts available.\n");
+            fprintf(stdout, "No more attempts available.\nSolution: ");
+            for (int i = 2; args[i] != NULL; i++) fprintf(stdout, "%s ", args[i]);
+            fprintf(stdout, "\n");
             //reveal secret key and end game
         }
-        else if (args[1] != NULL && !strcmp(args[1], "EMT")) {
-            fprintf(stdout, "Maximum playtime has been exceeded.\n");
+        else if (args[1] != NULL && !strcmp(args[1], "ETM")) {
+            fprintf(stdout, "Maximum playtime has been exceeded.\nSolution: ");
+            for (int i = 2; args[i] != NULL; i++) fprintf(stdout, "%s ", args[i]);
+            fprintf(stdout, "\n");
             //reveal secret key and end game
         }
         else if (args[1] != NULL && !strcmp(args[1], "ERR"))
             fprintf(stderr, "Invalid syntax.\n");
         else
             fprintf(stderr, "Unknown status: %s.\n", args[1]);
-
-    } else if (res == 1)
+    } else if (res == 1) {
         fprintf(stderr, "Error: memory allocation failed.\n");
-    else if (res == 2 || (args_counter != 2 && args_counter != 5 && args_counter != 9))
+    } else if (res == 2) {
         fprintf(stderr, "Error: received invalid message.\n");
-
-    for (int i = 0; i < (args[i] != NULL); i++) {
-        free(args[i]);
     }
-    free(args);
+
+    if (args != NULL) {
+        for (int i = 0; args[i] != NULL; i++) {
+            free(args[i]);
+        }
+        free(args);
+    }
+
     return 4; //codigo ainda nao usado
 }
+
 
 void show_trials_c(char *GSIP, char *GSport, char *PLID) {
 
