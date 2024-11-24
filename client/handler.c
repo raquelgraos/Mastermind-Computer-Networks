@@ -27,6 +27,8 @@ void start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded) {
     memcpy(ptr, "\n", sizeof(char));
     ptr += sizeof(char);
 
+    *ptr = '\0'; //ensures null termination
+
     //printf("%s", message);
 
     start_r(GSIP, GSport, message);
@@ -197,6 +199,8 @@ void show_trials_c(char *GSIP, char *GSport, char *PLID) {
     memcpy(ptr, "\n", sizeof(char));
     ptr += sizeof(char);
 
+    *ptr = '\0'; //ensures null termination
+
     printf("%s", message);
     //show_trials_r(GSIP, GSport, message);
 }
@@ -217,6 +221,8 @@ void show_sb_c(char *GSIP, char *GSport) {
 
     memcpy(ptr, "\n", sizeof(char));
     ptr += sizeof(char);
+
+    *ptr = '\0'; //ensures null termination
 
     printf("%s", message);
     //show_sb_r(GSIP, GSport, message);
@@ -244,6 +250,8 @@ void quit_c(char *GSIP, char *GSport, char *PLID) {
 
     memcpy(ptr, "\n", sizeof(char));
     ptr += sizeof(char);
+
+    *ptr = '\0'; //ensures null termination
 
     printf("%s", message);
     quit_r(GSIP, GSport, message);
@@ -326,6 +334,8 @@ void debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* 
         else memcpy(ptr, "\n", sizeof(char));
         ptr += sizeof(char);
     }
+
+    *ptr = '\0'; //ensures null termination
 
     printf("%s", message);
     debug_r(GSIP, GSport, message);
