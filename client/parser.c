@@ -1,6 +1,80 @@
 #include "parser.h"
 #include "handler.h"
 
+int parse_command(char *command, char *GSIP, char *GSport, char *command_line, char *PLID, int *n_trials) {
+    int res;
+    if (!strcmp(command, "start")) {
+        if (strcmp(PLID, "EMPTY") == 0) {
+            res = parse_start_command(GSIP, GSport, command_line, PLID);
+            if (res != 0) {
+                switch (res) {
+                    case 1:
+                        fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
+                        break;
+                    case 2:
+                        fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
+                        break;
+                    case 3:
+                        fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
+                        break;
+                    default:
+                        strcpy(PLID, "EMPTY");
+                        break;
+                }
+            }
+        } else {
+            printf("You are already playing a game with player id %s\n", PLID);
+        }
+    } else if (!strcmp(command, "try")) {
+        res = parse_try_command(GSIP, GSport, command_line, PLID, *n_trials);
+        if (res == 0) {
+            (*n_trials)++;
+        } else {
+            switch (res) {
+                case 2:
+                    fprintf(stderr, "Error: Invalid colour.\n");
+                    break;
+                case 3:
+                    fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
+                    break;
+                case 4:
+                    strcpy(PLID, "EMPTY");
+                    break;
+            }
+        }
+    } else if (!strcmp(command, "show_trials") || !strcmp(command, "st")) {
+        show_trials_c(GSIP, GSport, PLID);
+    } else if (!strcmp(command, "scoreboard") || !strcmp(command, "sb")) {
+        show_sb_c(GSIP, GSport);
+    } else if (!strcmp(command, "quit") || !strcmp(command, "exit")) {
+        if (!quit_c(GSIP, GSport, PLID)) strcpy(PLID, "EMPTY");
+        else {
+            fprintf(stdout, "Error quiting.\n");
+            return 0;
+        }
+        if (!strcmp(command, "exit")) return 1;
+    } else if (!strcmp(command, "debug")) {
+        res = parse_debug_command(GSIP, GSport, command_line, PLID);
+        switch (res) {
+            case 1:
+                fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
+                break;
+            case 2:
+                fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
+                break;
+            case 3:
+                fprintf(stderr, "Error: Debug Command requires 6 arguments.\n");
+                break;
+            case 4:
+                fprintf(stderr, "Error: Invalid colour.\n");
+                break;
+        }
+    } else {
+        fprintf(stderr, "Error: invalid command.\n");
+    }
+    return 0;
+}
+
 int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
     char *PLID_aux;
     char *max_time_str;

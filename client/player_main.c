@@ -9,29 +9,17 @@ void print_usage(const char *prog_name) {
 }
 
 int main(int argc, char *argv[]) {
-
     char *GSIP = DEFAULT_GSIP;
     char *GSport = DEFAULT_PORT;
 
+    // Parse command line arguments
     for (int i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-n")) {
-            if (i + 1 < argc && strcmp(argv[i + 1], "-p")) 
-                GSIP = argv[++i];
-            else {
-                fprintf(stderr, "Error: missing argument for -n.\n");
-                print_usage(argv[0]);
-                return 1;
-            }
-        } else if (!strcmp(argv[i], "-p")) {
-            if (i + 1 < argc) 
-                GSport = argv[++i];
-            else {
-                fprintf(stderr, "Error: missing argument for -p.\n");
-                print_usage(argv[0]);
-                return 1;
-            }
+        if (!strcmp(argv[i], "-n") && i + 1 < argc && strcmp(argv[i + 1], "-p")) {
+            GSIP = argv[++i];
+        } else if (!strcmp(argv[i], "-p") && i + 1 < argc) {
+            GSport = argv[++i];
         } else {
-            fprintf(stderr, "Error: Unknown argument '%s'.\n", argv[i]);
+            fprintf(stderr, "Error: Invalid argument '%s'.\n", argv[i]);
             print_usage(argv[0]);
             return 1;
         }
@@ -39,78 +27,19 @@ int main(int argc, char *argv[]) {
 
     char buffer[BUFSIZ];
     char input[BUFSIZ];
-    char *command_line;
-    char *command;
-    int n_trials = 1; // the first trial is number 1
+    char *command_line, *command;
+    int n_trials = 1;  // First trial is number 1
     char PLID[7] = "EMPTY";
-    
+
     while (1) {
         if (fgets(input, sizeof(input), stdin) != NULL) {
             command_line = strtok(input, "\n");
-            if (command_line == NULL || strlen(command_line) == 0) { // prevents errors in case of empty input
-                continue; 
-            }
+            if (command_line == NULL || strlen(command_line) == 0) continue;  // skip empty input
             strcpy(buffer, command_line);
             command = strtok(buffer, " ");
-            int res;
-
-            if (!strcmp(command, "start")) {
-                if (strcmp(PLID, "EMPTY") == 0) {
-                    res = parse_start_command(GSIP, GSport, command_line, PLID);
-                    if (res == 1){
-                        fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
-                        strcpy(PLID, "EMPTY");
-                    }
-                    else if (res == 2){
-                        fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
-                        strcpy(PLID, "EMPTY");
-                    }
-                    else if (res == 3){
-                        fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
-                        strcpy(PLID, "EMPTY");
-                    }
-                    else if (res!= 0) strcpy(PLID, "EMPTY");;
-                } else {
-                    printf("You are already playing a game with player id %s\n", PLID);
-                }
-            } else if (!strcmp(command, "try")) {
-                res = parse_try_command(GSIP, GSport, command_line, PLID, n_trials);
-                if (res == 0) n_trials++;
-                else if (res == 2) // specific return values for each error 
-                    fprintf(stderr, "Error: Invalid colour.\n");
-                else if (res == 3)
-                    fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
-                else if (res == 4) strcpy(PLID, "EMPTY");
-
-            } else if (!strcmp(command, "show_trials") || !strcmp(command, "st")) {
-                show_trials_c(GSIP, GSport, PLID);
-                
-            } else if (!strcmp(command, "scoreboard") || !strcmp(command, "sb")) {
-                show_sb_c(GSIP, GSport);
-
-            } else if (!strcmp(command, "quit")) {
-                quit_c(GSIP, GSport, PLID);
-
-            } else if (!strcmp(command, "exit")) {
-                // exit(PLID) or maybe just needs to quit and return
-                quit_c(GSIP, GSport, PLID);
-                return 0;
-
-            } else if (!strcmp(command, "debug")) {
-                res = parse_debug_command(GSIP, GSport, command_line, PLID);
-                if (res == 1)
-                    fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
-                else if (res == 2)
-                    fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
-                else if (res == 3)
-                    fprintf(stderr, "Error: Debug Command requires 6 arguments.\n");
-                else if (res == 4)
-                    fprintf(stderr, "Error: Invalid colour.\n");
-
-            } else {
-                fprintf(stderr, "Error: invalid command.\n");
-            }
-
-        } else fprintf(stderr, "Error: fgets() failed.\n");
+            if (parse_command(command, GSIP, GSport, command_line, PLID, &n_trials)) return 0;
+        } else {
+            fprintf(stderr, "Error: fgets() failed.\n");
+        }
     }
 }

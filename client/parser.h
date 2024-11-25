@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+int parse_command(char *command, char *GSIP, char *GSport, char *command_line, char *PLID, int *n_trials);
 int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]);
 int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7], int n_trials);
 int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]);

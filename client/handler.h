@@ -28,8 +28,8 @@ void show_trials_r(char *GSIP, char *GSport, char *message);
 void show_sb_c(char *GSIP, char *GSport);
 void show_sb_r(char *GSIP, char *GSport, char *message);
 
-void quit_c(char *GSIP, char *GSport, char *PLID);
-void quit_r(char *GSIP, char *GSport, char *message);
+int quit_c(char *GSIP, char *GSport, char *PLID);
+int quit_r(char *GSIP, char *GSport, char *message);
 
 void debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* args[7]);
 void debug_r(char *GSIP, char *GSport, char *message);

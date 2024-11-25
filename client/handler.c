@@ -464,7 +464,7 @@ void show_sb_r(char *GSIP, char *GSport, char *message) {
     free(args);
 }
 
-void quit_c(char *GSIP, char *GSport, char *PLID) {
+int quit_c(char *GSIP, char *GSport, char *PLID) {
 
     char OP_CODE[CODE_SIZE] = "QUT";
 
@@ -486,15 +486,15 @@ void quit_c(char *GSIP, char *GSport, char *PLID) {
     *ptr = '\0'; //ensures null termination
 
     //printf("%s", message);
-    quit_r(GSIP, GSport, message);
+    return quit_r(GSIP, GSport, message);
 }
 
-void quit_r(char *GSIP, char *GSport, char *message) {
+int quit_r(char *GSIP, char *GSport, char *message) {
     
     char msg_received[128];
     if (udp_conn(GSIP, GSport, message, msg_received)) {
         fprintf(stderr, "Error: Couldn't connect to UDP.\n");
-        return;
+        return 1;
     }
 
     //printf("buffer received: %s\n", msg_received);
@@ -514,22 +514,24 @@ void quit_r(char *GSIP, char *GSport, char *message) {
         if (args[1] != NULL && !strcmp(args[1], "OK")) {
             fprintf(stdout, "Secret key: %s %s %s %s\n", args[2], args[3], args[4], args[5]);           
             fprintf(stdout, "Game ended successfully.\n");
+            for (int i = 0; args[i] != NULL; i++) {
+                free(args[i]);
+            }
+            free(args);
+            return 0;
         } 
-        else if (args[1] != NULL && !strcmp(args[1], "NOK")) 
-            fprintf(stderr, "No ongoing game.\n");
-        else if (args[1] != NULL && !strcmp(args[1], "ERR")) 
-            fprintf(stderr, "Invalid syntax.\n");
+        else if (args[1] != NULL && !strcmp(args[1], "NOK")) fprintf(stderr, "No ongoing game.\n");
+        else if (args[1] != NULL && !strcmp(args[1], "ERR")) fprintf(stderr, "Invalid syntax.\n");
         else fprintf(stderr, "Unknown status: %s.\n", args[1]);
 
-    } else if (res == 1) 
-        fprintf(stderr, "Error: memory allocation failed.\n");
-    else if (res == 2)
-        fprintf(stderr, "Error: received invalid message.\n");
+    } else if (res == 1) fprintf(stderr, "Error: memory allocation failed.\n");
+    else if (res == 2) fprintf(stderr, "Error: received invalid message.\n");
 
     for (int i = 0; args[i] != NULL; i++) {
         free(args[i]);
     }
     free(args);
+    return 1;
 }
 
 void debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* args[7]){
