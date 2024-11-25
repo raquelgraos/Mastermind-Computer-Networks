@@ -26,7 +26,7 @@ void show_trials_c(char *GSIP, char *GSport, char *PLID);
 void show_trials_r(char *GSIP, char *GSport, char *message);
 
 void show_sb_c(char *GSIP, char *GSport);
-//void show_sb_r(char *GSIP, char *GSport, char *message);
+void show_sb_r(char *GSIP, char *GSport, char *message);
 
 void quit_c(char *GSIP, char *GSport, char *PLID);
 void quit_r(char *GSIP, char *GSport, char *message);

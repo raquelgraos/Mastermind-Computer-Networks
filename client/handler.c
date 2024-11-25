@@ -186,7 +186,6 @@ int try_r(char *GSIP, char *GSport, char *message) {
     return 4; //codigo ainda nao usado
 }
 
-
 void show_trials_c(char *GSIP, char *GSport, char *PLID) {
 
     char OP_CODE[CODE_SIZE] = "STR";
@@ -235,66 +234,87 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
             ssize_t fsize;
             fsize = atoi(args[3]);
 
+            char *path = getcwd(NULL, 0);
+            if (path == NULL) {
+                fprintf(stderr, "Error: getcwd failed.\n");
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                return;
+            }
+
             int dir = chdir(SAVED_DIR);
-            if (errno == ENOENT) {
+            if (dir != 0 && errno == ENOENT) {
                 if (mkdir(SAVED_DIR, 0700)) {
                     fprintf(stderr, "Error: mkdir failed.\n");
+                    for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                    free(args);
+                    free(path);
                     return;
                 }
                 int dir = chdir(SAVED_DIR);
                 if (dir != 0) {
                     fprintf(stderr, "Error: failed to open directory.\n");
+                    for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                    free(args);
+                    free(path);
                     return;
                 }
             } else if (dir != 0) {
-                fprintf(stderr, "Error: failed to open directory2.\n");
+                fprintf(stderr, "Error: failed to open directory.\n");
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                free(path);
                 return;
             }
             int fd = open(args[2], O_CREAT | O_RDWR);
             if (fd == -1) {
                 fprintf(stderr, "Error: failed to open %s file.\n", args[2]);
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                free(path);
                 return;
             }
 
             char *ptr = args[4];
             ssize_t n = write(fd, ptr, fsize);
+            if (n == -1) {
+                fprintf(stderr, "Error: write failed.\n");
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                free(path);
+                return;
+            }
+
             ssize_t total_bytes_written = n;
-            while (total_bytes_written != fsize) {
+            while (total_bytes_written < fsize) {
+                ptr += n;
+
+                n = write(fd, ptr, fsize - total_bytes_written);
                 if (n == -1) {
                     fprintf(stderr, "Error: write failed.\n");
-                    for (int i = 0; args[i] != NULL; i++) {
-                        free(args[i]);
-                    }
+                    for (int i = 0; args[i] != NULL; i++) free(args[i]);
                     free(args);
+                    free(path);
                     return;
                 }
 
                 total_bytes_written += n;
-                ptr += n;
-
-                if (total_bytes_written >= fsize) {
-                    fprintf(stderr, "Error: buffer overflow detected.\n");
-                    for (int i = 0; args[i] != NULL; i++) {
-                        free(args[i]);
-                    }
-                    free(args);
-                    return;
-                }
-
-                n = write(fd, ptr, fsize);
             }
             close(fd);
             fprintf(stdout, "File saved: %s (%ld bytes).\n", args[2], fsize);
+            dir = chdir(path);
+            if (dir != 0) 
+                fprintf(stderr, "Error: failed to return to original directory.\n");
+            free(path);
         }
     } else if (res == 1) 
         fprintf(stderr, "Error: memory allocation failed.\n");
     else if (res == 2)
         fprintf(stderr, "Error: received invalid message.\n");
 
-    for (int i = 0; args[i] != NULL; i++) {
-        free(args[i]);
-    }
+    for (int i = 0; args[i] != NULL; i++) free(args[i]);
     free(args);
+
 }
 
 void show_sb_c(char *GSIP, char *GSport) {
@@ -312,13 +332,112 @@ void show_sb_c(char *GSIP, char *GSport) {
 
     *ptr = '\0'; //ensures null termination
 
-    printf("%s", message);
-    //show_sb_r(GSIP, GSport, message);
+    show_sb_r(GSIP, GSport, message);
 }
 
-/*void show_sb_r(char *GSIP, char *GSport, char *message) {
+void show_sb_r(char *GSIP, char *GSport, char *message) {
 
-}*/
+    char msg_received[MAX_BUF_SIZE];
+
+    if (tcp_conn(GSIP, GSport, message, msg_received)) {
+        fprintf(stderr, "Error: Couldn't connect to TCP.\n");
+        return;
+    }
+
+    int max_n_args = 5;
+    char **args = NULL;
+
+    int res = deparse_buffer(msg_received, &args, max_n_args);
+  
+    int args_counter = 0;
+    while (args[args_counter] != NULL) args_counter++;
+
+    if (res == 0) {
+        if (args[1] != NULL && !strcmp(args[1], "EMPTY")) 
+            fprintf(stdout, "No won games found.\n");
+        else if (args[1] != NULL && !strcmp(args[1], "OK")) {
+            ssize_t fsize;
+            fsize = atoi(args[3]);
+
+            char *path = getcwd(NULL, 0);
+            if (path == NULL) {
+                fprintf(stderr, "Error: getcwd failed.\n");
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                return;
+            }
+            int dir = chdir(SAVED_DIR);
+            if (dir != 0 && errno == ENOENT) {
+                if (mkdir(SAVED_DIR, 0700)) {
+                    fprintf(stderr, "Error: mkdir failed.\n");
+                    for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                    free(args);
+                    free(path);
+                    return;
+                }
+                int dir = chdir(SAVED_DIR);
+                if (dir != 0) {
+                    fprintf(stderr, "Error: failed to open created directory.\n");
+                    for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                    free(args);
+                    free(path);
+                    return;
+                }
+            } else if (dir != 0) {
+                fprintf(stderr, "Error: failed to open directory.\n");
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                free(path);
+                return;
+            }
+            int fd = open(args[2], O_CREAT | O_RDWR);
+            if (fd == -1) {
+                fprintf(stderr, "Error: failed to open %s file.\n", args[2]);
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                free(path);
+                return;
+            }
+
+            char *ptr = args[4];
+            ssize_t n = write(fd, ptr, fsize);
+            if (n == -1) {
+                fprintf(stderr, "Error: write failed.\n");
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                free(path);
+                return;
+            }
+            ssize_t total_bytes_written = n;
+            while (total_bytes_written < fsize) {
+                ptr += n;
+
+                n = write(fd, ptr, fsize - total_bytes_written);
+                if (n == -1) {
+                    fprintf(stderr, "Error: write failed.\n");
+                    for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                    free(args);
+                    free(path);
+                    return;
+                }
+
+                total_bytes_written += n;
+            }
+            close(fd);
+            //display_scores(fd); //TODO
+            dir = chdir(path);
+            if (dir != 0)
+                fprintf(stderr, "Error: failed to return to original directory.\n");
+            free(path);
+        }
+    } else if (res == 1) 
+        fprintf(stderr, "Error: memory allocation failed.\n");
+    else if (res == 2)
+        fprintf(stderr, "Error: received invalid message.\n");
+
+    for (int i = 0; args[i] != NULL; i++) free(args[i]);
+    free(args);
+}
 
 void quit_c(char *GSIP, char *GSport, char *PLID) {
 
@@ -466,3 +585,7 @@ void debug_r(char *GSIP, char *GSport, char *message) {
     }
     free(args);
 }
+
+/*void display_scores(int fd) {
+
+}*/
