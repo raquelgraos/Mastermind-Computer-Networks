@@ -68,20 +68,15 @@ int tcp_conn(char *GSIP, char *GSport, char *message, char buffer[MAX_BUF_SIZE])
     printf("message sent: %s", message);
 
     char *buf_ptr = buffer;
-    ssize_t total_bytes_read = 0;
     n = read(fd, buf_ptr, MAX_BUF_SIZE);
+    if (n == -1) /*error*/ return 1; //exit(1);
+    
+    ssize_t total_bytes_read = n;
     while(n != 0) {
-        if (n == -1) /*error*/ return 1; //exit(1);
-        
         buf_ptr += n;
-        total_bytes_read += n;
-
-        if (total_bytes_read >= MAX_BUF_SIZE) {
-            fprintf(stderr, "Error: buffer overflow detected.\n");
-            return 1;
-        }
-
         n = read(fd, buf_ptr, MAX_BUF_SIZE - total_bytes_read);
+        if (n == -1) /*error*/ return 1; //exit(1);
+        total_bytes_read += n;
     }
 
     printf("message received: %s", buffer);
