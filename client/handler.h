@@ -16,8 +16,8 @@
 
 #define SAVED_DIR "client/saved/"
 
-void start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded);
-void start_r(char *GSIP, char *GSport, char *message);
+int start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded);
+int start_r(char *GSIP, char *GSport, char *message);
 
 int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials);
 int try_r(char *GSIP, char *GSport, char *message);

@@ -42,24 +42,37 @@ int main(int argc, char *argv[]) {
     char *command_line;
     char *command;
     int n_trials = 1; // the first trial is number 1
-    char PLID[7];
+    char PLID[7] = "EMPTY";
     
     while (1) {
         if (fgets(input, sizeof(input), stdin) != NULL) {
             command_line = strtok(input, "\n");
+            if (command_line == NULL || strlen(command_line) == 0) { // prevents errors in case of empty input
+                continue; 
+            }
             strcpy(buffer, command_line);
             command = strtok(buffer, " ");
             int res;
 
             if (!strcmp(command, "start")) {
-                res = parse_start_command(GSIP, GSport, command_line, PLID);
-                if (res == 1)
-                    fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
-                else if (res == 2)
-                    fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
-                else if (res == 3)
-                    fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
-
+                if (strcmp(PLID, "EMPTY") == 0) {
+                    res = parse_start_command(GSIP, GSport, command_line, PLID);
+                    if (res == 1){
+                        fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
+                        strcpy(PLID, "EMPTY");
+                    }
+                    else if (res == 2){
+                        fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
+                        strcpy(PLID, "EMPTY");
+                    }
+                    else if (res == 3){
+                        fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
+                        strcpy(PLID, "EMPTY");
+                    }
+                    else if (res!= 0) strcpy(PLID, "EMPTY");;
+                } else {
+                    printf("You are already playing a game with player id %s\n", PLID);
+                }
             } else if (!strcmp(command, "try")) {
                 res = parse_try_command(GSIP, GSport, command_line, PLID, n_trials);
                 if (res == 0) n_trials++;
@@ -67,6 +80,7 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Error: Invalid colour.\n");
                 else if (res == 3)
                     fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
+                else if (res == 4) strcpy(PLID, "EMPTY");
 
             } else if (!strcmp(command, "show_trials") || !strcmp(command, "st")) {
                 show_trials_c(GSIP, GSport, PLID);

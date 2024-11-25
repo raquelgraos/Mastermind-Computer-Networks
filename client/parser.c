@@ -29,8 +29,7 @@ int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
             strcat(max_time_padded, max_time_str);
         } else strcpy(max_time_padded, max_time_str);
 
-        start_c(GSIP, GSport, PLID, max_time_padded);
-        return 0;
+        return start_c(GSIP, GSport, PLID, max_time_padded);
     }
 }
 
@@ -54,8 +53,7 @@ int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7
         }
     }
 
-    if (!try_c(GSIP, GSport, PLID, args, n_trials)) return 0; //n_trials can be increased
-    else return 1;
+    return try_c(GSIP, GSport, PLID, args, n_trials);
 }
 
 int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {

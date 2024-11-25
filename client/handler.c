@@ -2,7 +2,7 @@
 #include "parser.h"
 #include "connections.h"
 
-void start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded) {
+int start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded) {
     
     char OP_CODE[CODE_SIZE] = "SNG";
 
@@ -31,15 +31,15 @@ void start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded) {
 
     //printf("%s", message);
 
-    start_r(GSIP, GSport, message);
+    return start_r(GSIP, GSport, message);
 }
 
-void start_r(char *GSIP, char *GSport, char *message) {
+int start_r(char *GSIP, char *GSport, char *message) {
     
     char msg_received[128];
     if (udp_conn(GSIP, GSport, message, msg_received)) {
         fprintf(stderr, "Error: Couldn't connect to UDP.\n");
-        return;
+        return 5;
     }
 
     //printf("messaged received in handler: %s", msg_received);
@@ -57,8 +57,10 @@ void start_r(char *GSIP, char *GSport, char *message) {
             fprintf(stdout, "Game started successfully.\n");
             //outra coisa eventualmente
         } 
-        else if (args[1] != NULL && !strcmp(args[1], "NOK"))
+        else if (args[1] != NULL && !strcmp(args[1], "NOK")){
             fprintf(stderr, "There is already an ongoing game.\n");
+            return 4;
+        }
         // o stor tinha dito para fazermos a verificacao dos args na parte do cliente ou seja isto nunca acontecerá como eu fiz (?)
         else if (args[1] != NULL && !strcmp(args[1], "ERR"))
             fprintf(stderr, "Invalid syntax.\n");
@@ -74,7 +76,7 @@ void start_r(char *GSIP, char *GSport, char *message) {
         if (args[i] != NULL) free(args[i]);
     }
     free(args);
-
+    return 0;
 }
 
 int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials) {
@@ -143,7 +145,16 @@ int try_r(char *GSIP, char *GSport, char *message) {
 
         if (args[1] != NULL && !strcmp(args[1], "OK")) {
             fprintf(stdout, "Valid trial.\n");
-            if (args_counter == 5 && atoi(args[3]) == 4) fprintf(stdout, "You won!\n");
+            if (args_counter == 5 && atoi(args[3]) == 4) {
+                fprintf(stdout, "You won!\n");
+                if (args != NULL) {
+                    for (int i = 0; args[i] != NULL; i++) {
+                        free(args[i]);
+                    }
+                    free(args);
+                }
+                return 4;
+            }
             for (int i = 0; args[i] != NULL; i++) free(args[i]);
             free(args);
             return 0;
@@ -158,12 +169,26 @@ int try_r(char *GSIP, char *GSport, char *message) {
             fprintf(stdout, "No more attempts available.\nSolution: ");
             for (int i = 2; args[i] != NULL; i++) fprintf(stdout, "%s ", args[i]);
             fprintf(stdout, "\n");
+            if (args != NULL) {
+                for (int i = 0; args[i] != NULL; i++) {
+                    free(args[i]);
+                }
+                free(args);
+            }
+            return 4;
             //reveal secret key and end game
         }
         else if (args[1] != NULL && !strcmp(args[1], "ETM")) {
             fprintf(stdout, "Maximum playtime has been exceeded.\nSolution: ");
             for (int i = 2; args[i] != NULL; i++) fprintf(stdout, "%s ", args[i]);
             fprintf(stdout, "\n");
+            if (args != NULL) {
+                for (int i = 0; args[i] != NULL; i++) {
+                    free(args[i]);
+                }
+                free(args);
+            }
+            return 4;
             //reveal secret key and end game
         }
         else if (args[1] != NULL && !strcmp(args[1], "ERR"))
@@ -183,7 +208,7 @@ int try_r(char *GSIP, char *GSport, char *message) {
         free(args);
     }
 
-    return 4; //codigo ainda nao usado
+    return 5; //codigo ainda nao usado
 }
 
 void show_trials_c(char *GSIP, char *GSport, char *PLID) {
