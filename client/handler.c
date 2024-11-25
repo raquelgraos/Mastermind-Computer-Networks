@@ -244,7 +244,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
 
             int dir = chdir(SAVED_DIR);
             if (dir != 0 && errno == ENOENT) {
-                if (mkdir(SAVED_DIR, 0700)) {
+                if (mkdir(SAVED_DIR, 0700)) { //confirmar mode
                     fprintf(stderr, "Error: mkdir failed.\n");
                     for (int i = 0; args[i] != NULL; i++) free(args[i]);
                     free(args);
@@ -266,7 +266,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
                 free(path);
                 return;
             }
-            int fd = open(args[2], O_CREAT | O_RDWR);
+            int fd = open(args[2], O_CREAT | O_RDWR); //confirmar modes
             if (fd == -1) {
                 fprintf(stderr, "Error: failed to open %s file.\n", args[2]);
                 for (int i = 0; args[i] != NULL; i++) free(args[i]);
@@ -368,7 +368,7 @@ void show_sb_r(char *GSIP, char *GSport, char *message) {
             }
             int dir = chdir(SAVED_DIR);
             if (dir != 0 && errno == ENOENT) {
-                if (mkdir(SAVED_DIR, 0700)) {
+                if (mkdir(SAVED_DIR, 0700)) { //confirmar mode
                     fprintf(stderr, "Error: mkdir failed.\n");
                     for (int i = 0; args[i] != NULL; i++) free(args[i]);
                     free(args);
@@ -390,7 +390,7 @@ void show_sb_r(char *GSIP, char *GSport, char *message) {
                 free(path);
                 return;
             }
-            int fd = open(args[2], O_CREAT | O_RDWR);
+            int fd = open(args[2], O_CREAT | O_RDWR); //confirmar modes
             if (fd == -1) {
                 fprintf(stderr, "Error: failed to open %s file.\n", args[2]);
                 for (int i = 0; args[i] != NULL; i++) free(args[i]);
