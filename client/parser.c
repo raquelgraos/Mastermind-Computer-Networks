@@ -146,7 +146,7 @@ int deparse_buffer(char *message, char ***args, int n_args) {
     }
     // null-terminate the array of arguments.
     (*args)[i] = NULL;
-    if (arg != NULL && strcmp((*args)[0], "RST") && strcmp((*args)[0], "RSS"))
+    if (arg != NULL)
         return 2; // invalid number of arguments (except for RST and RSS)
     else{
         // handle newline 

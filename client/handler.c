@@ -235,8 +235,6 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
             ssize_t fsize;
             fsize = atoi(args[3]);
 
-            printf("fsize: %ld\n", fsize);
-
             int dir = chdir(SAVED_DIR);
             if (errno == ENOENT) {
                 if (mkdir(SAVED_DIR, 0700)) {
@@ -264,7 +262,11 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
             while (total_bytes_written != fsize) {
                 if (n == -1) {
                     fprintf(stderr, "Error: write failed.\n");
-                    break;
+                    for (int i = 0; args[i] != NULL; i++) {
+                        free(args[i]);
+                    }
+                    free(args);
+                    return;
                 }
 
                 total_bytes_written += n;
@@ -272,7 +274,11 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
 
                 if (total_bytes_written >= fsize) {
                     fprintf(stderr, "Error: buffer overflow detected.\n");
-                    break;
+                    for (int i = 0; args[i] != NULL; i++) {
+                        free(args[i]);
+                    }
+                    free(args);
+                    return;
                 }
 
                 n = write(fd, ptr, fsize);
