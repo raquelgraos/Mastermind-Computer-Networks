@@ -42,7 +42,7 @@ void start_r(char *GSIP, char *GSport, char *message) {
         return;
     }
 
-    printf("messaged received in handler: %s", msg_received);
+    //printf("messaged received in handler: %s", msg_received);
     
     int n_args = 2;
     char **args = NULL;
@@ -113,7 +113,7 @@ int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials) {
 
     *ptr = '\0'; //ensures null termination
 
-    printf("Message to send: '%s'\n", message); 
+    //printf("Message to send: '%s'\n", message); 
 
     return try_r(GSIP, GSport, message);
 }
@@ -126,7 +126,7 @@ int try_r(char *GSIP, char *GSport, char *message) {
         return 1;
     }
 
-    printf("message received in handler: %s", msg_received);
+    //printf("message received in handler: %s", msg_received);
 
     int max_n_args = 9;
     char **args = NULL;
@@ -135,11 +135,11 @@ int try_r(char *GSIP, char *GSport, char *message) {
     if (res == 0) {
         int args_counter = 0;
         while (args[args_counter] != NULL) args_counter++;
-        printf("args_counter: %d\n", args_counter);
+        //printf("args_counter: %d\n", args_counter);
 
-        for (int i = 0; i < args_counter; i++) {
+        /*for (int i = 0; i < args_counter; i++) {
             printf("try arg %d: %s\n", i, args[i]);
-        }
+        }*/
 
         if (args[1] != NULL && !strcmp(args[1], "OK")) {
             fprintf(stdout, "Valid trial.\n");
@@ -208,13 +208,88 @@ void show_trials_c(char *GSIP, char *GSport, char *PLID) {
 
     *ptr = '\0'; //ensures null termination
 
-    printf("%s", message);
-    //show_trials_r(GSIP, GSport, message);
+    show_trials_r(GSIP, GSport, message);
 }
 
-/*void show_trials_r(char *GSIP, char *GSport, char *message) {
+void show_trials_r(char *GSIP, char *GSport, char *message) {
+    
+    char msg_received[MAX_BUF_SIZE];
 
-}*/
+    if (tcp_conn(GSIP, GSport, message, msg_received)) {
+        fprintf(stderr, "Error: Couldn't connect to TCP.\n");
+        return;
+    }
+
+    int max_n_args = 5;
+    char **args = NULL;
+
+    int res = deparse_buffer(msg_received, &args, max_n_args);
+  
+    int args_counter = 0;
+    while (args[args_counter] != NULL) args_counter++;
+
+    if (res == 0) {
+        if (args[1] != NULL && !strcmp(args[1], "NOK")) 
+            fprintf(stdout, "No games found.\n");
+        else if (args[1] != NULL && ((!strcmp(args[1], "ACT")) || (!strcmp(args[1], "FIN")))) {
+            ssize_t fsize;
+            fsize = atoi(args[3]);
+
+            printf("fsize: %ld\n", fsize);
+
+            int dir = chdir(SAVED_DIR);
+            if (errno == ENOENT) {
+                if (mkdir(SAVED_DIR, 0700)) {
+                    fprintf(stderr, "Error: mkdir failed.\n");
+                    return;
+                }
+                int dir = chdir(SAVED_DIR);
+                if (dir != 0) {
+                    fprintf(stderr, "Error: failed to open directory.\n");
+                    return;
+                }
+            } else if (dir != 0) {
+                fprintf(stderr, "Error: failed to open directory2.\n");
+                return;
+            }
+            int fd = open(args[2], O_CREAT | O_RDWR);
+            if (fd == -1) {
+                fprintf(stderr, "Error: failed to open %s file.\n", args[2]);
+                return;
+            }
+
+            char *ptr = args[4];
+            ssize_t n = write(fd, ptr, fsize);
+            ssize_t total_bytes_written = n;
+            while (total_bytes_written != fsize) {
+                if (n == -1) {
+                    fprintf(stderr, "Error: write failed.\n");
+                    break;
+                }
+
+                total_bytes_written += n;
+                ptr += n;
+
+                if (total_bytes_written >= fsize) {
+                    fprintf(stderr, "Error: buffer overflow detected.\n");
+                    break;
+                }
+
+                n = write(fd, ptr, fsize);
+            }
+            close(fd);
+            fprintf(stdout, "File saved: %s (%ld bytes).\n", args[2], fsize);
+        }
+    } else if (res == 1) 
+        fprintf(stderr, "Error: memory allocation failed.\n");
+    else if (res == 2)
+        fprintf(stderr, "Error: received invalid message.\n");
+
+    for (int i = 0; args[i] != NULL; i++) {
+        free(args[i]);
+    }
+    free(args);
+}
 
 void show_sb_c(char *GSIP, char *GSport) {
 
@@ -260,7 +335,7 @@ void quit_c(char *GSIP, char *GSport, char *PLID) {
 
     *ptr = '\0'; //ensures null termination
 
-    printf("%s", message);
+    //printf("%s", message);
     quit_r(GSIP, GSport, message);
 }
 
@@ -272,7 +347,7 @@ void quit_r(char *GSIP, char *GSport, char *message) {
         return;
     }
 
-    printf("buffer received: %s\n", msg_received);
+    //printf("buffer received: %s\n", msg_received);
     
     int max_n_args = 6;
     char **args = NULL;
@@ -287,8 +362,8 @@ void quit_r(char *GSIP, char *GSport, char *message) {
 
     if (res == 0) {
         if (args[1] != NULL && !strcmp(args[1], "OK")) {
+            fprintf(stdout, "Secret key: %s %s %s %s\n", args[2], args[3], args[4], args[5]);           
             fprintf(stdout, "Game ended successfully.\n");
-            //revelar secret key e sair do jogo
         } 
         else if (args[1] != NULL && !strcmp(args[1], "NOK")) 
             fprintf(stderr, "No ongoing game.\n");
@@ -298,7 +373,7 @@ void quit_r(char *GSIP, char *GSport, char *message) {
 
     } else if (res == 1) 
         fprintf(stderr, "Error: memory allocation failed.\n");
-    else if (res == 2 || (args_counter != 2 && args_counter != 6))
+    else if (res == 2)
         fprintf(stderr, "Error: received invalid message.\n");
 
     for (int i = 0; args[i] != NULL; i++) {
@@ -306,8 +381,6 @@ void quit_r(char *GSIP, char *GSport, char *message) {
     }
     free(args);
 }
-
-//void exit_c(char *GSIP, char *GSport) {}
 
 void debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* args[7]){
 
@@ -344,7 +417,7 @@ void debug_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded, char* 
 
     *ptr = '\0'; //ensures null termination
 
-    printf("%s", message);
+    //printf("%s", message);
     debug_r(GSIP, GSport, message);
 }
 
@@ -356,8 +429,7 @@ void debug_r(char *GSIP, char *GSport, char *message) {
         return;
     }
 
-    printf("buffer received: %s\n", msg_received);
-    
+    //printf("buffer received: %s\n", msg_received);
     int n_args = 2;
     char **args = NULL;
 

@@ -1,5 +1,6 @@
 #include "parser.h"
 #include "player_main.h"
+#include "handler.h"
 
 void print_usage(const char *prog_name) {
     fprintf(stdout, "Usage: %s [-n GSIP] [-p GSport]\n", prog_name);

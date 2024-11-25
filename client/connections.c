@@ -32,7 +32,7 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
 
     char *token = strtok(buffer_aux, "\n"); // acho que isto e desnecessario
     strcat(token, "\n");
-    printf("message received in udp: %s", token);
+    printf("message received: %s", token);
 
     strcpy(buffer, token);
     freeaddrinfo(res);
@@ -40,37 +40,53 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
     return 0;
 }
 
-/*int tcp_conn(char *GSIP, char *GSport, char *message, char *args) {
+int tcp_conn(char *GSIP, char *GSport, char *message, char buffer[MAX_BUF_SIZE]) {
 
     int fd, errcode;
     ssize_t n;
     socklen_t addrlean;
     struct addrinfo hints, *res;
     struct sockaddr_in addr;
-    char buffer[128];
 
-    fd = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
-    if (fd == - 1) error return 1; //exit(1);
+    fd = socket(AF_INET, SOCK_STREAM, 0); // TCP socket
+    if (fd == - 1) /*error*/ return 1; //exit(1);
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;          // IPv4
-    hints.ai_socktype = SOCK_DGRAM;     // UDP socket
+    hints.ai_socktype = SOCK_STREAM;     // TCP socket
 
     errcode = getaddrinfo(GSIP, GSport, &hints, &res);
-    if (errcode != 0) error return 1; //exit(1);
+    if (errcode != 0) /*error*/ return 1; //exit(1);
 
     n = connect(fd, res->ai_addr, res->ai_addrlen);
-    if (n == -1) error return 1; //exit(1);
+    if (n == -1) /*error*/ return 1; //exit(1);
 
     int msg_len = strlen(message);
     n = write(fd, message, msg_len);
-    if (n == -1) error return 1; //exit(1);
+    if (n == -1) /*error*/ return 1; //exit(1);
 
-    n = read(fd, buffer, 128);
-    if (n == -1) error return 1; //exit(1);
+    printf("message sent: %s", message);
 
-    deparse_buffer(buffer, args);
+    char *buf_ptr = buffer;
+    ssize_t total_bytes_read = 0;
+    n = read(fd, buf_ptr, MAX_BUF_SIZE);
+    while(n != 0) {
+        if (n == -1) /*error*/ return 1; //exit(1);
+        
+        buf_ptr += n;
+        total_bytes_read += n;
+
+        if (total_bytes_read >= MAX_BUF_SIZE) {
+            fprintf(stderr, "Error: buffer overflow detected.\n");
+            return 1;
+        }
+
+        n = read(fd, buf_ptr, MAX_BUF_SIZE - total_bytes_read);
+    }
+
+    printf("message received: %s", buffer);
+
     freeaddrinfo(res);
     close(fd);
     return 0;
-}*/
+}

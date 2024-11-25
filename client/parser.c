@@ -124,7 +124,7 @@ bool is_valid_max_time(char *max_time_str, int len_max_time) {
 
 
 int deparse_buffer(char *message, char ***args, int n_args) {
-    printf("message received in deparser: %s", message);
+    //printf("message received in deparser: %s", message);
 
     *args = (char **)malloc((n_args + 1) * sizeof(char *)); // allocate space for n_args + 1 (for NULL).
     if (*args == NULL) return 1; // malloc error
@@ -132,6 +132,7 @@ int deparse_buffer(char *message, char ***args, int n_args) {
     int i = 0;
     char *arg = strtok(message, " ");
     while (arg != NULL && i < n_args) {
+        //printf("arg %d: %s\n", i, arg);
         (*args)[i] = (char *)malloc((strlen(arg) + 1) * sizeof(char)); // +1 for null-terminator.
         if ((*args)[i] == NULL) {
             for (int j = 0; j < i; j++) free((*args)[j]);
@@ -140,11 +141,13 @@ int deparse_buffer(char *message, char ***args, int n_args) {
         }
         strcpy((*args)[i], arg);
         i++;
-        arg = strtok(NULL, " "); 
+        if (i == n_args - 1) arg = strtok(NULL, "\0");
+        else arg = strtok(NULL, " ");
     }
     // null-terminate the array of arguments.
     (*args)[i] = NULL;
-    if (arg != NULL) return 2; // invalid number of arguments
+    if (arg != NULL && strcmp((*args)[0], "RST") && strcmp((*args)[0], "RSS"))
+        return 2; // invalid number of arguments (except for RST and RSS)
     else{
         // handle newline 
         if (i > 0) {
