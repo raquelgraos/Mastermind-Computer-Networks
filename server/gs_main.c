@@ -1,4 +1,5 @@
 #include "gs_main.h"
+#include "connections.h"
 
 void print_usage(const char *prog_name) {
     fprintf(stdout, "Usage: %s [-p GSport] [-v]\n", prog_name);
@@ -25,29 +26,29 @@ int main(int argc, char *argv[]) {
     }
     
     pid_t udp;
-    pid_t tcp;
+    //pid_t tcp;
 
     udp = fork();
     if (udp == -1) {
-        fprintf(stderr, "Error: fork failed.\n");
+        fprintf(stderr, "Error: UDP process creation failed.\n");
         return 1;
     } else if (udp == 0) {
         udp_connection(GSport, VERBOSE);
         return 0;
     }
 
-    tcp = fork();
+    /*tcp = fork();
     if (tcp == -1) {
-        fprintf(stderr, "Error: fork failed.\n");
+        fprintf(stderr, "Error: TCP process creation failed.\n");
         return 1;
     } else if (tcp == 0) {
         tcp_connection(GSport, VERBOSE);
         return 0;
-    }
+    }*/
 
     int status;
     waitpid(udp, &status, 0);
-    waitpid(tcp, &status, 0);
-    fprintf(stdout, "Terminating...\n");
+    //waitpid(tcp, &status, 0);
+    fprintf(stdout, "Terminating server...\n");
     return 0;
 }

@@ -6,7 +6,7 @@ TARGET = player
 TARGET2 = GS
 
 SRCS = client/player_main.c client/parser.c client/handler.c client/connections.c
-SRCS2 = server/gs_main.c server/connections.c
+SRCS2 = server/gs_main.c server/connections.c server/parser.c server/handler.c
 
 OBJS = $(SRCS:.c=.o)
 OBJS2 = $(SRCS2:.c=.o)

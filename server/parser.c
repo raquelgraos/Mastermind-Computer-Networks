@@ -1,0 +1,64 @@
+#include "parser.h"
+#include "handler.h"
+
+int parse_input(char *input, char **message) {
+    
+    int input_len = strlen(input);
+    char input_aux[input_len + 1];
+    strcpy(input_aux, input);
+
+    int counter = 0;
+    char *token = strtok(input_aux, " ");
+    while (token != NULL) {
+        counter++;
+        token = strtok(NULL, " ");
+    }
+
+    char *args[counter];
+    char *arg = strtok(input, " ");
+    int i = 0;
+    while (arg != NULL) {
+        fprintf(stderr, "args[%d]: %s\n", i, arg);
+        args[i] = (char*) malloc(strlen(arg) + 1);
+        if (args[i] == NULL) {
+            fprintf(stderr, "Error: Memory allocation failed.\n");
+            return 1;
+        }
+        strcpy(args[i], arg);
+        i++;
+        arg = strtok(NULL, " ");
+    }
+
+    int res = 0;
+    if (args[0] != NULL && !strcmp(args[0], "SNG")) {
+        res = start_s(args, message, counter);
+
+    } /*else if (args[0] != NULL && !strcmp(args[0], "TRY")) {
+        res = try_s(args, message, counter);
+
+    } else if (args[0] != NULL && !strcmp(args[0], "STR")) {
+        res = show_trials_s(args, message, counter);
+
+    } else if (args[0] != NULL && !strcmp(args[0], "SSB")) {
+        res = scoreboard_s(args, message, counter);
+
+    } else if (args[0] != NULL && !strcmp(args[0], "QUT")) {
+       res = quit_s(args, message, counter);
+
+    } else if (args[0] != NULL && !strcmp(args[0], "DBG")) {
+        res = debug_s(args, message, counter);
+
+    } */else {
+        *message = (char*) malloc(5);
+        if (*message == NULL) {
+            fprintf(stderr, "Error: Memory allocation failed.\n");
+            res = 1;
+        } else strcpy(*message, "ERR\n");
+    }
+
+    for (int j = 0; j < counter; j++) {
+        if (args[j] != NULL)
+            free(args[j]);
+    }
+    return res;
+}
