@@ -1,73 +1,38 @@
 #include "parser.h"
 #include "handler.h"
 
-int parse_command(char *command, char *GSIP, char *GSport, char *command_line, char *PLID, int *n_trials) {
+int parse_command(char *command, char *GSIP, char *GSport, char *command_line, char *PLID, int *n_trials, int *active) {
     int res;
     if (!strcmp(command, "start")) {
-        if (strcmp(PLID, "EMPTY") == 0) {
+        if (*active == 0) {
             res = parse_start_command(GSIP, GSport, command_line, PLID);
-            if (res != 0) {
-                switch (res) {
-                    case 1:
-                        fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
-                        break;
-                    case 2:
-                        fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
-                        break;
-                    case 3:
-                        fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
-                        break;
-                    default:
-                        strcpy(PLID, "EMPTY");
-                        break;
-                }
-            }
-        } else {
-            printf("You are already playing a game with player id %s\n", PLID);
-        }
+            if (res == 0) {
+                (*active) = 1;
+                (*n_trials) = 1; //reset trials
+            } 
+        } else printf("You are already playing a game with player id %s\n", PLID);
+
     } else if (!strcmp(command, "try")) {
         res = parse_try_command(GSIP, GSport, command_line, PLID, *n_trials);
-        if (res == 0) {
-            (*n_trials)++;
-        } else {
-            switch (res) {
-                case 2:
-                    fprintf(stderr, "Error: Invalid colour.\n");
-                    break;
-                case 3:
-                    fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
-                    break;
-                case 4:
-                    strcpy(PLID, "EMPTY");
-                    break;
-            }
-        }
+        if (res == 0) (*n_trials)++;
+        else if (res == 2) (*active) = 0; // game ended
+
     } else if (!strcmp(command, "show_trials") || !strcmp(command, "st")) {
         show_trials_c(GSIP, GSport, PLID);
+
     } else if (!strcmp(command, "scoreboard") || !strcmp(command, "sb")) {
         show_sb_c(GSIP, GSport);
+
     } else if (!strcmp(command, "quit") || !strcmp(command, "exit")) {
-        if (!quit_c(GSIP, GSport, PLID)) strcpy(PLID, "EMPTY");
-        else {
-            fprintf(stdout, "Error quiting.\n");
-            return 0;
-        }
-        if (!strcmp(command, "exit")) return 1;
+        if (!quit_c(GSIP, GSport, PLID)) (*active) = 0;
+            
+        if (!strcmp(command, "exit")) return 1; // close terminal (even if quitting failed ??)
+
     } else if (!strcmp(command, "debug")) {
         res = parse_debug_command(GSIP, GSport, command_line, PLID);
-        switch (res) {
-            case 1:
-                fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
-                break;
-            case 2:
-                fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
-                break;
-            case 3:
-                fprintf(stderr, "Error: Debug Command requires 6 arguments.\n");
-                break;
-            case 4:
-                fprintf(stderr, "Error: Invalid colour.\n");
-                break;
+        if (res == 0) {
+            (*active) = 1;
+            (*n_trials) = 1; //reset trials
         }
     } else {
         fprintf(stderr, "Error: invalid command.\n");
@@ -83,17 +48,27 @@ int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     command = strtok(buffer, " ");
 
     PLID_aux = strtok(NULL, " ");
-    if (PLID_aux == NULL) return 3; // missing PLID arg
+    if (PLID_aux == NULL) {
+        fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
+        return 1;
+    }
 
     max_time_str = strtok(NULL, "");
-    if (max_time_str == NULL) return 3; // missing max_time arg
+    if (max_time_str == NULL) {
+        fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
+        return 1;
+    }
 
     char max_time_padded[4];
     int len_max_time = strlen(max_time_str);
 
-    if (!is_valid_PLID(PLID_aux)) return 1; // invalid PLID
-    else if (!is_valid_max_time(max_time_str, len_max_time)) return 2; // invalid max_time
-    else {
+    if (!is_valid_PLID(PLID_aux)) {
+        fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
+        return 1;
+    } else if (!is_valid_max_time(max_time_str, len_max_time)) {
+        fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
+        return 1;
+    } else {
         strcpy(PLID, PLID_aux);
         if (len_max_time == 1) {
             strcpy(max_time_padded, "00");
@@ -103,7 +78,7 @@ int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
             strcat(max_time_padded, max_time_str);
         } else strcpy(max_time_padded, max_time_str);
 
-        return start_c(GSIP, GSport, PLID, max_time_padded);
+        return start_c(GSIP, GSport, PLID, max_time_padded); // 0 if success, 1 otherwise
     }
 }
 
@@ -119,15 +94,19 @@ int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7
     }
 
     // if arg isn't NULL or i != 5 there are too many/few args, respectively
-    if (arg != NULL || i != 5) return 3;
+    if (arg != NULL || i != 5) {
+        fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
+        return 0;
+    }
 
     for (int j = 1; j < 5; j++) {
         if (strlen(args[j]) != 1 || !is_valid_color(args[j][0])) {
-            return 2; // invalid colour (specific return valeus for specific errors)
+            fprintf(stderr, "Error: Invalid colour.\n");
+            return 0;
         }
     }
 
-    return try_c(GSIP, GSport, PLID, args, n_trials);
+    return try_c(GSIP, GSport, PLID, args, n_trials);  // 0 if success, 2 if game ended, 1 otherwise
 }
 
 int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
@@ -142,20 +121,29 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     }
 
     // if arg isn't NULL or i != 7 there are too many/few args, respectively
-    if (arg != NULL || i != 7) return 3;
+    if (arg != NULL || i != 7) {
+        fprintf(stderr, "Error: Debug Command requires 6 arguments.\n");
+        return 0;
+    }
 
     for (int j = 3; j < 7; j++) {
         if (strlen(args[j]) != 1 || !is_valid_color(args[j][0])) {
-            return 4; // invalid colour
+            fprintf(stderr, "Error: Invalid colour.\n");
+            return 0;
         }
     }
 
     char max_time_padded[4];
     int len_max_time = strlen(args[2]);
 
-    if (!is_valid_PLID(args[1])) return 1; // invalid PLID
-    else if (!is_valid_max_time(args[2], len_max_time)) return 2; // invalid max_time
-    else {
+    if (!is_valid_PLID(args[1])) {
+        fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
+        return 1;
+    }
+    else if (!is_valid_max_time(args[2], len_max_time)) {
+        fprintf(stderr, "Error: max_playtime must be positive and musn't exceed 600 seconds.\n");
+        return 1;
+    } else {
         strcpy(PLID, args[1]);
         if (len_max_time == 1) {
             strcpy(max_time_padded, "00");
@@ -165,8 +153,7 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
             strcat(max_time_padded, args[2]);
         } else strcpy(max_time_padded, args[2]);
 
-        debug_c(GSIP, GSport, PLID, max_time_padded, args);
-        return 0;
+        return debug_c(GSIP, GSport, PLID, max_time_padded, args); // 0 if success, 1 otherwise
     }
 }
 
@@ -194,12 +181,10 @@ bool is_valid_max_time(char *max_time_str, int len_max_time) {
     else return true;
 }
 
-
 int deparse_buffer(char *message, char ***args, int n_args) {
-    //printf("message received in deparser: %s", message);
 
     *args = (char **)malloc((n_args + 1) * sizeof(char *)); // allocate space for n_args + 1 (for NULL).
-    if (*args == NULL) return 1; // malloc error
+    if (*args == NULL) return 1;
 
     int i = 0;
     char *arg = strtok(message, " ");
@@ -209,7 +194,8 @@ int deparse_buffer(char *message, char ***args, int n_args) {
         if ((*args)[i] == NULL) {
             for (int j = 0; j < i; j++) free((*args)[j]);
             free(*args);
-            return 1; // malloc error
+            fprintf(stderr, "Error: memory allocation failed.\n");
+            return 1;
         }
         strcpy((*args)[i], arg);
         i++;
@@ -218,9 +204,10 @@ int deparse_buffer(char *message, char ***args, int n_args) {
     }
     // null-terminate the array of arguments.
     (*args)[i] = NULL;
-    if (arg != NULL)
-        return 2; // invalid number of arguments (except for RST and RSS)
-    else{
+    if (arg != NULL) {
+        fprintf(stderr, "Error: received invalid message.\n");
+        return 1;
+    } else {
         // handle newline 
         if (i > 0) {
             char *last_arg = (*args)[i - 1];

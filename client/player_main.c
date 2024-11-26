@@ -28,8 +28,9 @@ int main(int argc, char *argv[]) {
     char buffer[BUFSIZ];
     char input[BUFSIZ];
     char *command_line, *command;
-    int n_trials = 1;  // First trial is number 1
-    char PLID[7] = "EMPTY";
+    int n_trials = 1;
+    char PLID[7];
+    int active = 0; // no active game
 
     while (1) {
         if (fgets(input, sizeof(input), stdin) != NULL) {
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]) {
             if (command_line == NULL || strlen(command_line) == 0) continue;  // skip empty input
             strcpy(buffer, command_line);
             command = strtok(buffer, " ");
-            if (parse_command(command, GSIP, GSport, command_line, PLID, &n_trials)) return 0;
+            if (parse_command(command, GSIP, GSport, command_line, PLID, &n_trials, &active)) return 0; // close terminal
         } else {
             fprintf(stderr, "Error: fgets() failed.\n");
         }
