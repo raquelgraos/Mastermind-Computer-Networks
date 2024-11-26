@@ -14,7 +14,7 @@
 #define TRIALS_SIZE 1 //max_trials = 8
 #define COLOURS_SIZE 4
 
-#define SAVED_DIR "client/saved/"
+#define SAVED_DIR "client/SAVED/"
 
 int start_c(char *GSIP, char *GSport, char *PLID, char *max_time_padded);
 int start_r(char *GSIP, char *GSport, char *message);
