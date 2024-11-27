@@ -28,6 +28,43 @@ int main(int argc, char *argv[]) {
     pid_t udp;
     //pid_t tcp;
 
+    char *path = getcwd(NULL, 0);
+    if (path == NULL) {
+        fprintf(stderr, "Error: getcwd failed.\n");
+        return 1;
+    }
+
+    int n = chdir("server");
+    if (n != 0) {
+        fprintf(stderr, "Error: failed to open server directory.\n");
+        free(path);
+        return 1;
+    }
+
+    DIR* dir = opendir(GAMES_DIR);
+    if (dir) 
+        closedir(dir);
+    else if (ENOENT == errno) {
+        if (mkdir(GAMES_DIR, 0700) == -1)
+            fprintf(stderr, "Error: failed to create GAMES directory.\n");
+    }
+
+    dir = opendir(SCORES_DIR);
+    if (dir) 
+        closedir(dir);
+    else if (ENOENT == errno) {
+        if (mkdir(SCORES_DIR, 0700) == -1)
+            fprintf(stderr, "Error: failed to create SCORES directory.\n");
+    }
+
+    n = chdir(path);
+    if (n != 0) {
+        fprintf(stderr, "Error (main): failed to open directory.\n");
+        free(path);
+        return 1;
+    }
+    free(path);
+
     udp = fork();
     if (udp == -1) {
         fprintf(stderr, "Error: UDP process creation failed.\n");
