@@ -44,7 +44,7 @@ int udp_connection(char *GSport, int VERBOSE) {
     while (1) {
         testfds = readfds; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=10;
+        timeout.tv_sec=200;
 
         // Monitor the socket for incoming data
         int out_fds = select(FD_SETSIZE, &testfds, (fd_set *) NULL, (fd_set *) NULL, (struct timeval *) &timeout);
@@ -72,8 +72,9 @@ int udp_connection(char *GSport, int VERBOSE) {
 
                     char *message = NULL;
                     if (parse_input(input, &message)) {
-                        fprintf(stderr, "Failed to parse the received message.\n");
+                        fprintf(stdout, "Failed to obtain message to send.\n");
                         close(fd);
+                        if (message != NULL) free(message);
                         return 1;
                     }
 

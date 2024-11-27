@@ -39,10 +39,10 @@ int parse_input(char *input, char **message) {
     if (args[0] != NULL && !strcmp(args[0], "SNG")) {
         res = start_s(args, message, counter);
 
-    } /*else if (args[0] != NULL && !strcmp(args[0], "TRY")) {
+    } else if (args[0] != NULL && !strcmp(args[0], "TRY")) {
         res = try_s(args, message, counter);
 
-    } else if (args[0] != NULL && !strcmp(args[0], "STR")) {
+    } /*else if (args[0] != NULL && !strcmp(args[0], "STR")) {
         res = show_trials_s(args, message, counter);
 
     } else if (args[0] != NULL && !strcmp(args[0], "SSB")) {
