@@ -1,12 +1,13 @@
 #include "handler.h"
 #include "gs_main.h"
-#include "../client/parser.h" // nao funciona idk why
 
-bool is_valid_PLID(char *PLID) {
+bool is_valid_PLID(const char PLID[7]) {
+    fprintf(stderr, "Debug: PLID in valid call: %s\n", PLID);
     if (strlen(PLID) != PLID_SIZE) return false;
 
     for (int i = 0; i < PLID_SIZE; i++)
         if (!isdigit(PLID[i])) return false;
+    fprintf(stderr, "Debug: PLID in valid call2: %s\n", PLID);
     return true;
 }
 
@@ -34,30 +35,44 @@ int start_s(char **args, char **message, int n_args) {
     }
 
     char PLID[7];
-    if (args[1] != NULL) strcpy(PLID, args[1]);
+    if (args[1] != NULL) 
+        strcpy(PLID, args[1]);
+    else 
+        strcpy(status, "ERR");
+
+    PLID[6] = '\0';
+    fprintf(stderr, "Debug: PLID before valid call: %s\n", PLID);
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
         strcpy(status, "ERR");
     }
+    fprintf(stderr, "Debug: PLID after valid call: %s\n", PLID);
     
     char max_time[4];
-    if (args[2] != NULL) strcpy(max_time, args[2]);
+    if (args[2] != NULL) 
+        strcpy(max_time, args[2]);
+    else 
+        strcpy(status, "ERR");
 
+    max_time[3] = '\0';
     if (!is_valid_max_time(max_time, 3)) {
         fprintf(stderr, "Error: invalid max time.\n");
         strcpy(status, "ERR");
     }
-    
-    int res = check_ongoing_game(PLID);
-    if (res == 0) {
-        if (start_game(PLID, max_time) == 0) // game started successfully
-            strcpy(status, "OK");
-        else 
+
+    if (strcmp(status, "ERR")) { // if no error has been detected so far
+        fprintf(stderr, "Debug: PLID before check call: %s\n", PLID); // está a desaparecer ??
+        int res = check_ongoing_game(PLID);
+        if (res == 0) {
+            if (start_game(PLID, max_time) == 0) // game started successfully
+                strcpy(status, "OK");
+            else 
+                strcpy(status, "ERR");
+        } else if (res == 1) {
+            strcpy(status, "NOK"); // ongoing game already
+        } else if (res == 2) {
             strcpy(status, "ERR");
-    } else if (res == 1) {
-        strcpy(status, "NOK"); // ongoing game already
-    } else if (res == 2) {
-        strcpy(status, "ERR");
+        }
     }
     
     int status_len = strlen(status);
@@ -85,7 +100,9 @@ int start_s(char **args, char **message, int n_args) {
     return 0;
 }
 
-int start_game(char *PLID, char *max_time) { //TODO 's' no header
+int start_game(const char PLID[7], char *max_time) { //TODO 's' no header
+
+    fprintf(stderr, "Debug: PLID in start call: %s\n", PLID);
     
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
@@ -101,7 +118,6 @@ int start_game(char *PLID, char *max_time) { //TODO 's' no header
     }
 
     char filename[ONGOING_GAME_SIZE + 1];
-    fprintf(stderr, "PLID: %s\n", PLID);
     sprintf(filename, "GAME_%s.txt", PLID);
 
     dir = chdir(GAMES_DIR);
@@ -177,7 +193,9 @@ int debug_s(char **args, char **message, int n_args) {
 
 }*/
 
-int check_ongoing_game(char *PLID) {
+int check_ongoing_game(const char PLID[7]) {
+
+    fprintf(stderr, "Debug: PLID in check call: %s\n", PLID);
 
     struct dirent **filelist;
 
@@ -229,7 +247,7 @@ void generate_random_key(char *key) {
     key[KEY_SIZE] = '\0';
 }
 
-void assemble_header(char *header, char *PLID, char *mode, char *max_time) {
+void assemble_header(char *header, const char PLID[7], char *mode, char *max_time) {
     
     char key[KEY_SIZE + 1];
     generate_random_key(key);
