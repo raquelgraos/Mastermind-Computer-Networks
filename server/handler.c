@@ -2,12 +2,13 @@
 #include "gs_main.h"
 
 bool is_valid_PLID(const char PLID[7]) {
-    fprintf(stderr, "Debug: PLID in valid call: %s\n", PLID);
     if (strlen(PLID) != PLID_SIZE) return false;
 
-    for (int i = 0; i < PLID_SIZE; i++)
-        if (!isdigit(PLID[i])) return false;
-    fprintf(stderr, "Debug: PLID in valid call2: %s\n", PLID);
+    for (int i = 0; i < PLID_SIZE; i++) {
+        if (!isdigit(PLID[i])) 
+            return false;
+    }
+
     return true;
 }
 
@@ -28,40 +29,39 @@ int start_s(char **args, char **message, int n_args) {
 
     char OP_CODE[CODE_SIZE] = "RSG";
 
-    char status[4] = "";
+    char status[4];
     if (n_args != 3) {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
     }
 
-    char PLID[7];
+    char PLID[PLID_SIZE + 1];
     if (args[1] != NULL) 
         strcpy(PLID, args[1]);
     else 
         strcpy(status, "ERR");
 
     PLID[6] = '\0';
-    fprintf(stderr, "Debug: PLID before valid call: %s\n", PLID);
+
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
         strcpy(status, "ERR");
     }
-    fprintf(stderr, "Debug: PLID after valid call: %s\n", PLID);
-    
-    char max_time[4];
+        
+    char max_time[TIME_SIZE + 1];
     if (args[2] != NULL) 
         strcpy(max_time, args[2]);
-    else 
+    else
         strcpy(status, "ERR");
 
     max_time[3] = '\0';
+
     if (!is_valid_max_time(max_time, 3)) {
         fprintf(stderr, "Error: invalid max time.\n");
         strcpy(status, "ERR");
     }
 
     if (strcmp(status, "ERR")) { // if no error has been detected so far
-        fprintf(stderr, "Debug: PLID before check call: %s\n", PLID); // está a desaparecer ??
         int res = check_ongoing_game(PLID);
         if (res == 0) {
             if (start_game(PLID, max_time) == 0) // game started successfully
@@ -96,13 +96,11 @@ int start_s(char **args, char **message, int n_args) {
     ptr += 1;
 
     *ptr = '\0';
-    
+
     return 0;
 }
 
 int start_game(const char PLID[7], char *max_time) { //TODO 's' no header
-
-    fprintf(stderr, "Debug: PLID in start call: %s\n", PLID);
     
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
@@ -194,8 +192,6 @@ int debug_s(char **args, char **message, int n_args) {
 }*/
 
 int check_ongoing_game(const char PLID[7]) {
-
-    fprintf(stderr, "Debug: PLID in check call: %s\n", PLID);
 
     struct dirent **filelist;
 

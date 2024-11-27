@@ -29,6 +29,12 @@ int parse_input(char *input, char **message) {
         arg = strtok(NULL, " ");
     }
 
+    char *last_arg = args[i - 1];
+    size_t len = strlen(last_arg);
+    if (len > 0 && last_arg[len - 1] == '\n') {
+        last_arg[len - 1] = '\0'; // Remove the newline character.
+    }
+
     int res = 0;
     if (args[0] != NULL && !strcmp(args[0], "SNG")) {
         res = start_s(args, message, counter);
