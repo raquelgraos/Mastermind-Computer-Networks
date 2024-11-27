@@ -19,11 +19,11 @@
 #define ONGOING_GAME_SIZE 15
 #define COLOURS "RGBYOP"
 
-bool is_valid_PLID(const char PLID[7]);
-bool is_valid_max_time(char *max_time_str, int len_max_time);
+bool is_valid_PLID(const char PLID[PLID_SIZE + 1]);
+bool is_valid_max_time(const char max_time[TIME_SIZE + 1], int len_max_time);
 
 int start_s(char **args, char **message, int n_args);
-int start_game(const char PLID[7], char *max_time);
+int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1]);
 
 /*int try_s(char **args, char **message, int n_args);
 int show_trials_s(char **args, char **message, int n_args);
@@ -31,8 +31,8 @@ int scoreboard_s(char **args, char **message, int n_args);
 int quit_s(char **args, char **message, int n_args);
 int debug_s(char **args, char **message, int n_args);*/
 
-int check_ongoing_game(const char PLID[7]);
+int check_ongoing_game(const char PLID[PLID_SIZE + 1]);
 void generate_random_key(char *key);
-void assemble_header(char *header, const char PLID[7], char *mode, char *max_time);
+void assemble_header(char *header, const char PLID[PLID_SIZE + 1], char *mode, const char max_time[TIME_SIZE + 1]);
 
 #endif

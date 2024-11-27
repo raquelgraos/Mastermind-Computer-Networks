@@ -1,7 +1,7 @@
 #include "handler.h"
 #include "gs_main.h"
 
-bool is_valid_PLID(const char PLID[7]) {
+bool is_valid_PLID(const char PLID[PLID_SIZE + 1]) {
     if (strlen(PLID) != PLID_SIZE) return false;
 
     for (int i = 0; i < PLID_SIZE; i++) {
@@ -12,7 +12,7 @@ bool is_valid_PLID(const char PLID[7]) {
     return true;
 }
 
-bool is_valid_max_time(char *max_time_str, int len_max_time) {
+bool is_valid_max_time(const char max_time_str[TIME_SIZE + 1], int len_max_time) {
     if (len_max_time > TIME_SIZE) return false;
 
     for (int i = 0; i < len_max_time; i++) {
@@ -100,7 +100,7 @@ int start_s(char **args, char **message, int n_args) {
     return 0;
 }
 
-int start_game(const char PLID[7], char *max_time) { //TODO 's' no header
+int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1]) { //TODO 's' no header
     
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
@@ -125,7 +125,7 @@ int start_game(const char PLID[7], char *max_time) { //TODO 's' no header
         return 1;
     }
     
-    int fd = open(filename, O_CREAT | O_RDWR);
+    int fd = open(filename, O_CREAT | O_RDWR, 0644);
     if (fd == -1) {
         fprintf(stderr, "Error: failed to open %s file.\n", filename);
         free(path);
@@ -134,9 +134,11 @@ int start_game(const char PLID[7], char *max_time) { //TODO 's' no header
 
     char header[HEADER_SIZE + 1];
     assemble_header(header, PLID, "P", max_time);
+    //fprintf(stderr, "%s", header);
 
-    char *ptr = header;    
-    ssize_t n = write(fd, ptr, HEADER_SIZE + 1);
+    char *ptr = header;
+    ssize_t len = strlen(header);    
+    ssize_t n = write(fd, ptr, len);
     if (n == -1) {
         fprintf(stderr, "Error: write failed.\n");
         free(path);
@@ -144,10 +146,10 @@ int start_game(const char PLID[7], char *max_time) { //TODO 's' no header
     }
 
     ssize_t total_bytes_written = n;
-    while (total_bytes_written < HEADER_SIZE + 1) {
+    while (total_bytes_written < len) {
         ptr += n;
 
-        n = write(fd, ptr, HEADER_SIZE + 1 - total_bytes_written);
+        n = write(fd, ptr, len - total_bytes_written);
         if (n == -1) {
             fprintf(stderr, "Error: write failed.\n");
             free(path);
@@ -191,7 +193,7 @@ int debug_s(char **args, char **message, int n_args) {
 
 }*/
 
-int check_ongoing_game(const char PLID[7]) {
+int check_ongoing_game(const char PLID[PLID_SIZE + 1]) {
 
     struct dirent **filelist;
 
@@ -243,8 +245,8 @@ void generate_random_key(char *key) {
     key[KEY_SIZE] = '\0';
 }
 
-void assemble_header(char *header, const char PLID[7], char *mode, char *max_time) {
-    
+void assemble_header(char *header, const char PLID[PLID_SIZE + 1], char *mode, const char max_time[TIME_SIZE + 1]) {
+
     char key[KEY_SIZE + 1];
     generate_random_key(key);
 
@@ -279,7 +281,7 @@ void assemble_header(char *header, const char PLID[7], char *mode, char *max_tim
     ptr += 1;
 
     memcpy(ptr, max_time, TIME_SIZE);
-    ptr += 1;
+    ptr += TIME_SIZE;
 
     memcpy(ptr, " ", 1);
     ptr += 1;
