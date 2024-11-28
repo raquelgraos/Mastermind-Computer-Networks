@@ -208,22 +208,22 @@ int send_start_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **messa
 // MARK: TRY
 int try_s(char **args, char **message, int n_args) {
 
+    char status[4];
+
     char OP_CODE[CODE_SIZE + 1] = "RTR";
 
-    char status[4];
-    if (n_args != 7) {
-        fprintf(stderr, "Error: invalid number of args.\n");
-        strcpy(status, "ERR");
-        if (send_start_message(OP_CODE, status, message)) //reusing start message since it's the same format
-            return 1;
-        else return 0;
-    }
-
     char PLID[PLID_SIZE + 1];
-    if (args[1] != NULL) 
-        strcpy(PLID, args[1]);
-    else {
-        strcpy(status, "ERR");
+    if (n_args > 1) {
+        if (args[1] != NULL) 
+            strcpy(PLID, args[1]);
+        else {
+            strcpy(status, "ERR");
+            if (send_start_message(OP_CODE, status, message)) //reusing start message since it's the same format
+                return 1;
+            else return 0;
+        }
+    } else {
+        strcpy(status, "NOK"); // no PLID was sent (trial out of context)
         if (send_start_message(OP_CODE, status, message)) //reusing start message since it's the same format
             return 1;
         else return 0;
@@ -233,6 +233,14 @@ int try_s(char **args, char **message, int n_args) {
 
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
+        strcpy(status, "ERR");
+        if (send_start_message(OP_CODE, status, message)) //reusing start message since it's the same format
+            return 1;
+        else return 0;
+    }
+
+    if (n_args != 7) {
+        fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
         if (send_start_message(OP_CODE, status, message)) //reusing start message since it's the same format
             return 1;
@@ -251,6 +259,13 @@ int try_s(char **args, char **message, int n_args) {
 
     max_time_str[TIME_SIZE] = '\0';
 
+    if (check_ongoing_game(PLID) == 0) {
+        strcpy(status, "NOK");
+        if (send_start_message(OP_CODE, status, message)) //reusing start message since it's the same format
+            return 1;
+        return 0;
+    }
+
     int res_time = check_if_in_time(PLID);
     //int res_trial = check_if_trials(PLID); //TODO
     int res_trial = 0;
@@ -259,7 +274,7 @@ int try_s(char **args, char **message, int n_args) {
         else strcpy(status, "ETM");
 
         char key[KEY_SIZE + 1];
-        if (end_game_after_try(res_time, PLID, key))
+        if (end_game_after_try(res_time, PLID, key, 'L'))
             return 1; // error
         if (send_end_try_message(OP_CODE, status, key, message)) // sends secret key
             return 1; //error
@@ -276,7 +291,7 @@ int try_s(char **args, char **message, int n_args) {
     return 0;
 }
 
-int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char *key) {
+int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char *key, char mode) {
 
     int src;
     char *path = getcwd(NULL, 0);
@@ -388,9 +403,9 @@ int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char *key) {
     }
 
     char new_file[22]; 
-    sprintf (new_file, "%4d%02d%02d_%02d%02d%02d_L.txt",
+    sprintf (new_file, "%4d%02d%02d_%02d%02d%02d_%c.txt",
             end_time->tm_year + 1900, end_time->tm_mon + 1, end_time->tm_mday,
-            end_time->tm_hour, end_time->tm_min, end_time->tm_sec);
+            end_time->tm_hour, end_time->tm_min, end_time->tm_sec, mode);
 
     int dest = open(new_file, O_CREAT | O_RDWR, 0644);
     if (dest == -1) {

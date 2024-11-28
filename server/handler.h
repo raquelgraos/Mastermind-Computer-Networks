@@ -28,7 +28,7 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
 int send_start_message(char OP_CODE[CODE_SIZE], char status[4], char **message);
 
 int try_s(char **args, char **message, int n_args);
-int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1]);
+int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], char mode);
 //int try_game();
 int send_end_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_SIZE + 1], char **message);
 //int send_try_message();
