@@ -68,7 +68,11 @@ int udp_connection(char *GSport, int VERBOSE) {
                         return 1;
                     }
 
-                    fprintf(stderr, "message received: %s", input);
+                    int len = strlen(input);
+                    fprintf(stderr, "len input: %d\n", len);
+                    input[strlen(input)] = '\0';
+
+                    fprintf(stderr, "message received: %s\n", input);
 
                     char *message = NULL;
                     if (parse_input(input, &message)) {
