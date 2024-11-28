@@ -218,7 +218,7 @@ int try_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
-    char PLID[PLID_SIZE + 1];
+    char PLID[PLID_SIZE];
     if (args[1] != NULL) 
         strcpy(PLID, args[1]);
     else {
@@ -228,7 +228,7 @@ int try_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
-    PLID[6] = '\0';
+    //PLID[6] = '\0';
 
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
@@ -238,7 +238,7 @@ int try_s(char **args, char **message, int n_args) {
         else return 0;
     }
         
-    char max_time_str[TIME_SIZE + 1];
+    char max_time_str[TIME_SIZE];
     if (args[2] != NULL) 
         strcpy(max_time_str, args[2]);
     else {
@@ -312,7 +312,7 @@ int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID
         total_bytes_read += n;
     }
 
-    char key[KEY_SIZE + 1];
+    char key[KEY_SIZE];
     
     if (sscanf(header, "%*s %*s %4s %*s %*s %*s %*s %*s", key) != 1) {
         fprintf(stderr, "Error: failed to scan header.\n");
@@ -321,7 +321,7 @@ int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID
         return 1;
     }
 
-    key[KEY_SIZE + 1] = '\0';
+    //key[KEY_SIZE] = '\0';
     //fprintf(stderr, "%s\n", key);
 
     close(fd);
