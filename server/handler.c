@@ -259,12 +259,12 @@ int try_s(char **args, char **message, int n_args) {
 
     max_time_str[TIME_SIZE] = '\0';
 
-    if (check_ongoing_game(PLID) == 0) {
+    /*if (check_ongoing_game(PLID) == 0) {
         strcpy(status, "NOK");
         if (send_start_message(OP_CODE, status, message)) //reusing start message since it's the same format
             return 1;
         return 0;
-    }
+    }*/ // dont think this is necessary considering a player cant have multiple games at once
 
     int res_time = check_if_in_time(PLID);
     //int res_trial = check_if_trials(PLID); //TODO
