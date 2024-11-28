@@ -292,7 +292,7 @@ int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID
     
     char header[HEADER_SIZE + 1];
     char *ptr = header;
-    int n = read(fd, ptr, HEADER_SIZE - 1); // leave space for null terminator.
+    int n = read(fd, ptr, HEADER_SIZE); // leave space for null terminator.
     if (n == -1) {
         fprintf(stderr, "Error: failed to read file.\n");
         free(path);
@@ -302,7 +302,7 @@ int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID
     ssize_t total_bytes_read = n;
     while (n != 0) {
         ptr += n;
-        n = read(fd, ptr, HEADER_SIZE - total_bytes_read - 1); // leave space for null terminator.
+        n = read(fd, ptr, HEADER_SIZE - total_bytes_read); // leave space for null terminator.
         if (n == -1) {
             fprintf(stderr, "Error: failed to read file.\n");
             free(path);
@@ -311,6 +311,8 @@ int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID
         }
         total_bytes_read += n;
     }
+
+    header[HEADER_SIZE + 1] = '\0';
 
     char key[KEY_SIZE];
     
@@ -368,7 +370,7 @@ int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID
 
     *ptr = '\0';
 
-    fprintf(stderr, "%s", *message);
+    //fprintf(stderr, "%s", *message);
 
     return 0;
 }

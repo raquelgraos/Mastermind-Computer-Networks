@@ -17,7 +17,7 @@
 #include <signal.h>
 #include <sys/select.h>
 
-#define UDP_MAX_BUF_SIZE 24 // na vdd acho que é 24 mas nao va o diabo tece las
+#define UDP_MAX_BUF_SIZE 30 // na vdd acho que é 24 mas nao va o diabo tece las
 #define TCP_MAX_BUF_SIZE 11
 
 int udp_connection(char *GSport, int VERBOSE);
