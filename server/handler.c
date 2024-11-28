@@ -254,13 +254,14 @@ int try_s(char **args, char **message, int n_args) {
     int res_time = check_if_in_time(PLID);
     //int res_trial = check_if_trials(PLID); //TODO
     int res_trial = 0;
-    if (res_time == 2 || res_trial == 2) { // if not in time or out of trials
-        if (res_time == 2) strcpy(status, "ETM");
-        else if (res_trial == 2) strcpy(status, "ENT");
+    if ((res_time != 0 && res_time != 1) || res_trial == 2) { // if not in time or out of trials
+        if (res_trial == 2) strcpy(status, "ENT");
+        else strcpy(status, "ETM");
 
-        if (end_game_after_try())
+        char key[KEY_SIZE + 1];
+        if (end_game_after_try(res_time, PLID, key))
             return 1; // error
-        if (send_end_try_message(OP_CODE, status, PLID, message)) // sends secret key
+        if (send_end_try_message(OP_CODE, status, key, message)) // sends secret key
             return 1; //error
         return 0;
 
@@ -275,68 +276,166 @@ int try_s(char **args, char **message, int n_args) {
     return 0;
 }
 
-int end_game_after_try() {
-    
-    fprintf(stderr, "Ending game!\n");
-    return 0;
-}
+int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char *key) {
 
-int send_end_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char PLID[PLID_SIZE + 1], char **message) {
-
-    int fd;
+    int src;
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
         fprintf(stderr, "Error: getcwd failed.\n");
         return 1;
     }
 
-    if (open_game_file(PLID, &fd, path)) 
+    if (open_active_game(PLID, &src, path))
         return 1;
-    
+
     char header[HEADER_SIZE + 1];
     char *ptr = header;
-    int n = read(fd, ptr, HEADER_SIZE); // leave space for null terminator.
+    int n = read(src, ptr, HEADER_SIZE); // leave space for null terminator.
     if (n == -1) {
         fprintf(stderr, "Error: failed to read file.\n");
         free(path);
-        close(fd);
+        close(src);
         return 1;
     }
     ssize_t total_bytes_read = n;
     while (n != 0) {
         ptr += n;
-        n = read(fd, ptr, HEADER_SIZE - total_bytes_read); // leave space for null terminator.
+        n = read(src, ptr, HEADER_SIZE - total_bytes_read); // leave space for null terminator.
         if (n == -1) {
             fprintf(stderr, "Error: failed to read file.\n");
             free(path);
-            close(fd);
+            close(src);
             return 1;
         }
         total_bytes_read += n;
     }
 
     header[HEADER_SIZE] = '\0';
-
-    char key[KEY_SIZE + 1];
     
     if (sscanf(header, "%*s %*s %4s %*s %*s %*s %*s %*s", key) != 1) {
         fprintf(stderr, "Error: failed to scan header.\n");
-        close(fd);
+        close(src);
         free(path);
         return 1;
     }
 
-    key[KEY_SIZE] = '\0';
-    //fprintf(stderr, "%s\n", key);
+    time_t fulltime;
+    struct tm *end_time;
+    char time_str[DATE_SIZE + 1 + TIME_SIZE + 1];
 
-    close(fd);
-    int dir = chdir(path);
-    if (dir != 0) {
-        fprintf(stderr, "Error: failed to open og directory.\n");
+    time(&fulltime);
+    end_time = gmtime(&fulltime);
+    sprintf (time_str, "%4d-%02d-%02d %02d:%02d:%02d %d",
+            end_time->tm_year + 1900, end_time->tm_mon + 1, end_time->tm_mday,
+            end_time->tm_hour, end_time->tm_min, end_time->tm_sec, res_time);
+
+    if (write(src, time_str, strlen(time_str) + 1) == -1) {
+        fprintf(stderr, "Error: Failed to write end of game time.\n");
+        free(path);
+        close(src);
+        return 1;
+    }
+
+    if (lseek(src, 0, SEEK_SET) == -1) {
+        fprintf(stderr, "Error: Failed to seek to the start of the file.\n");
+        free(path);
+        close(src);
+        return 1;
+    }
+
+    char fdata[BUFSIZ]; // TODO tamanho temporario
+    char *ptr_data = fdata;
+    n = read(src, ptr_data, BUFSIZ - 1); // leave space for null terminator.
+    if (n == -1) {
         free(path);
         return 1;
-    }    
+    }
+
+    total_bytes_read = n;
+    while (n != 0) {
+        ptr_data += n;
+        n = read(src, ptr_data, BUFSIZ - total_bytes_read - 1); // leave space for null terminator.
+        if (n == -1) {
+            free(path);
+            return 1;
+        }
+        total_bytes_read += n;
+    }
+
+    fdata[total_bytes_read] = '\0';
+
+    fprintf(stderr, "read: %s", fdata);
+
+    close(src);
+
+    char filename[ONGOING_GAME_SIZE + 1];
+    sprintf(filename, "GAME_%s.txt", PLID);
+    unlink(filename); // remove file
+
+    int dir = chdir(PLID);
+    if (ENOENT == errno) {
+        if (mkdir(PLID, 0700) == -1) {
+            fprintf(stderr, "Error: failed to create %s directory.\n", PLID);
+            free(path);
+            return 1;
+        }
+        dir = chdir(PLID);
+        if (dir != 0) {
+            fprintf(stderr, "Error: failed to enter created %s directory.\n", PLID);
+            free(path);
+            return 1;
+        }
+    }
+
+    char new_file[22]; 
+    sprintf (new_file, "%4d%02d%02d_%02d%02d%02d_L.txt",
+            end_time->tm_year + 1900, end_time->tm_mon + 1, end_time->tm_mday,
+            end_time->tm_hour, end_time->tm_min, end_time->tm_sec);
+
+    int dest = open(new_file, O_CREAT | O_RDWR, 0644);
+    if (dest == -1) {
+        fprintf(stderr, "Error: failed to open %s file.\n", new_file);
+        free(path);
+        close(dest);
+        return 1;
+    }
+
+    char *ptr2 = fdata;
+    n = write(dest, ptr2, total_bytes_read - 1);
+    if (n == -1) {
+        fprintf(stderr, "Error: write failed.\n");
+        free(path);
+        close(dest);
+        return 1;
+    }
+    ssize_t total_bytes_written = n;
+    while (total_bytes_written < total_bytes_read - 1) {
+        ptr2 += n;
+
+        n = write(dest, ptr2, total_bytes_read - 1 - total_bytes_written);
+        if (n == -1) {
+            fprintf(stderr, "Error: write failed.\n");
+            free(path);
+            close(dest);
+            return 1;
+        }
+
+        total_bytes_written += n;
+    }
+
+    close(dest);
+
+    dir = chdir(path);
+    if (dir != 0) {
+        fprintf(stderr, "Error: failed to open original directory.\n");
+        return 1;
+    }
     free(path);
+    
+    return 0;
+}
+
+int send_end_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_SIZE + 1], char **message) {
 
     int status_len = strlen(status);
     *message = (char *) malloc(3 + 1 + strlen(status) + 1 + KEY_SIZE + 3 + 2);
@@ -345,7 +444,7 @@ int send_end_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char PLID[
         return 1;
     }
 
-    ptr = *message;
+    char *ptr = *message;
 
     memcpy(ptr, OP_CODE, CODE_SIZE);
     ptr += CODE_SIZE;
@@ -398,7 +497,7 @@ int debug_s(char **args, char **message, int n_args) {
 
 }*/
 
-int open_game_file(char PLID[PLID_SIZE], int *fd, char *path) {
+int open_active_game(char PLID[PLID_SIZE], int *fd, char *path) {
 
     int dir = chdir("server");
     if (dir != 0) {
@@ -426,7 +525,7 @@ int open_game_file(char PLID[PLID_SIZE], int *fd, char *path) {
     return 0; 
 }
 
-int check_ongoing_game(const char PLID[PLID_SIZE]) {
+int check_ongoing_game(const char PLID[PLID_SIZE + 1]) {
 
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
@@ -465,7 +564,7 @@ int check_ongoing_game(const char PLID[PLID_SIZE]) {
     return ret_value;
 }
 
-int check_if_in_time(char PLID[PLID_SIZE]) {
+int check_if_in_time(char PLID[PLID_SIZE + 1]) {
     
     int fd;
     char *path = getcwd(NULL, 0);
@@ -474,7 +573,7 @@ int check_if_in_time(char PLID[PLID_SIZE]) {
         return 1;
     }
 
-    if (open_game_file(PLID, &fd, path)) 
+    if (open_active_game(PLID, &fd, path)) 
         return 1;
     
     char header[HEADER_SIZE + 1];
@@ -527,7 +626,7 @@ int check_if_in_time(char PLID[PLID_SIZE]) {
     int res = 0;
 
     if (current_time - fulltime >= max_time)
-        res = 2; // max_time exceeded
+        res = current_time - fulltime; // max_time exceeded
 
     close(fd);
 
@@ -550,7 +649,7 @@ void generate_random_key(char *key) {
     key[KEY_SIZE] = '\0';
 }
 
-int assemble_header(char *header, const char PLID[PLID_SIZE], char *mode, const char max_time[TIME_SIZE]) {
+int assemble_header(char *header, const char PLID[PLID_SIZE + 1], char *mode, const char max_time[TIME_SIZE + 1]) {
 
     char key[KEY_SIZE + 1];
     generate_random_key(key);

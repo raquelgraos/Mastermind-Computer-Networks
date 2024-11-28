@@ -28,9 +28,9 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
 int send_start_message(char OP_CODE[CODE_SIZE], char status[4], char **message);
 
 int try_s(char **args, char **message, int n_args);
-int end_game_after_try();
+int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1]);
 //int try_game();
-int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID_SIZE + 1], char **message);
+int send_end_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_SIZE + 1], char **message);
 //int send_try_message();
 
 /*int show_trials_s(char **args, char **message, int n_args);
@@ -38,9 +38,9 @@ int scoreboard_s(char **args, char **message, int n_args);
 int quit_s(char **args, char **message, int n_args);
 int debug_s(char **args, char **message, int n_args);*/
 
-int open_game_file(char PLID[PLID_SIZE + 1], int *fd, char *path);
+int open_active_game(char PLID[PLID_SIZE + 1], int *fd, char *path);
 int check_ongoing_game(const char PLID[PLID_SIZE + 1]);
-int check_if_in_time(char PLID[7]);
+int check_if_in_time(char PLID[PLID_SIZE + 1]);
 void generate_random_key(char *key);
 int assemble_header(char *header, const char PLID[PLID_SIZE + 1], char *mode, const char max_time[TIME_SIZE + 1]);
 
