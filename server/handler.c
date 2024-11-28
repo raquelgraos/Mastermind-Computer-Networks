@@ -1,7 +1,7 @@
 #include "handler.h"
 #include "gs_main.h"
 
-bool is_valid_PLID(const char PLID[PLID_SIZE]) {
+bool is_valid_PLID(const char PLID[PLID_SIZE + 1]) {
     if (strlen(PLID) != PLID_SIZE) return false;
 
     for (int i = 0; i < PLID_SIZE; i++) {
@@ -12,7 +12,7 @@ bool is_valid_PLID(const char PLID[PLID_SIZE]) {
     return true;
 }
 
-bool is_valid_max_time(const char max_time_str[TIME_SIZE], int len_max_time) {
+bool is_valid_max_time(const char max_time_str[TIME_SIZE + 1], int len_max_time) {
     if (len_max_time > TIME_SIZE) return false;
 
     for (int i = 0; i < len_max_time; i++) {
@@ -27,7 +27,7 @@ bool is_valid_max_time(const char max_time_str[TIME_SIZE], int len_max_time) {
 // MARK: START
 int start_s(char **args, char **message, int n_args) {
 
-    char OP_CODE[CODE_SIZE] = "RSG";
+    char OP_CODE[CODE_SIZE + 1] = "RSG";
 
     char status[4];
     if (n_args != 3) {
@@ -38,7 +38,7 @@ int start_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
-    char PLID[PLID_SIZE];
+    char PLID[PLID_SIZE + 1];
     if (args[1] != NULL) 
         strcpy(PLID, args[1]);
     else {
@@ -48,7 +48,7 @@ int start_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
-    //PLID[6] = '\0';
+    PLID[PLID_SIZE] = '\0';
 
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
@@ -58,9 +58,9 @@ int start_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
-    fprintf(stderr, "PLID before: %s\n", PLID);
+    //fprintf(stderr, "PLID before: %s\n", PLID);
         
-    char max_time[TIME_SIZE];
+    char max_time[TIME_SIZE + 1];
     if (args[2] != NULL) 
         strcpy(max_time, args[2]);
     else {
@@ -70,7 +70,7 @@ int start_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
-    //max_time[3] = '\0';
+    max_time[TIME_SIZE] = '\0';
 
     if (!is_valid_max_time(max_time, 3)) {
         fprintf(stderr, "Error: invalid max time.\n");
@@ -81,7 +81,7 @@ int start_s(char **args, char **message, int n_args) {
     }
 
     int res = check_ongoing_game(PLID);
-    fprintf(stderr, "PLI after: %s\n", PLID);
+    //fprintf(stderr, "PLI after: %s\n", PLID);
     if (res == 0) {
         if (start_game(PLID, max_time) == 0) { // game started successfully
             strcpy(status, "OK");
@@ -106,7 +106,7 @@ int start_s(char **args, char **message, int n_args) {
     return 0;
 }
 
-int start_game(const char PLID[PLID_SIZE], const char max_time[TIME_SIZE]) {
+int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1]) {
     
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
@@ -123,6 +123,7 @@ int start_game(const char PLID[PLID_SIZE], const char max_time[TIME_SIZE]) {
 
     char filename[ONGOING_GAME_SIZE + 1];
     sprintf(filename, "GAME_%s.txt", PLID);
+    filename[ONGOING_GAME_SIZE] = '\0';
 
     dir = chdir(GAMES_DIR);
     if (dir != 0) {
@@ -177,7 +178,7 @@ int start_game(const char PLID[PLID_SIZE], const char max_time[TIME_SIZE]) {
     return 0;
 }
 
-int send_start_message(char OP_CODE[CODE_SIZE], char status[4], char **message) {
+int send_start_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **message) {
 
     int status_len = strlen(status);
     *message = (char *) malloc(3 + 1 + strlen(status) + 2);
@@ -207,7 +208,7 @@ int send_start_message(char OP_CODE[CODE_SIZE], char status[4], char **message) 
 // MARK: TRY
 int try_s(char **args, char **message, int n_args) {
 
-    char OP_CODE[CODE_SIZE] = "RTR";
+    char OP_CODE[CODE_SIZE + 1] = "RTR";
 
     char status[4];
     if (n_args != 7) {
@@ -218,7 +219,7 @@ int try_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
-    char PLID[PLID_SIZE];
+    char PLID[PLID_SIZE + 1];
     if (args[1] != NULL) 
         strcpy(PLID, args[1]);
     else {
@@ -228,7 +229,7 @@ int try_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
-    //PLID[6] = '\0';
+    PLID[PLID_SIZE] = '\0';
 
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
@@ -238,7 +239,7 @@ int try_s(char **args, char **message, int n_args) {
         else return 0;
     }
         
-    char max_time_str[TIME_SIZE];
+    char max_time_str[TIME_SIZE + 1];
     if (args[2] != NULL) 
         strcpy(max_time_str, args[2]);
     else {
@@ -247,6 +248,8 @@ int try_s(char **args, char **message, int n_args) {
             return 1;
         return 0;
     }
+
+    max_time_str[TIME_SIZE] = '\0';
 
     int res_time = check_if_in_time(PLID);
     //int res_trial = check_if_trials(PLID); //TODO
@@ -278,7 +281,7 @@ int end_game_after_try() {
     return 0;
 }
 
-int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID_SIZE], char **message) {
+int send_end_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char PLID[PLID_SIZE + 1], char **message) {
 
     int fd;
     char *path = getcwd(NULL, 0);
@@ -312,9 +315,9 @@ int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID
         total_bytes_read += n;
     }
 
-    header[HEADER_SIZE + 1] = '\0';
+    header[HEADER_SIZE] = '\0';
 
-    char key[KEY_SIZE];
+    char key[KEY_SIZE + 1];
     
     if (sscanf(header, "%*s %*s %4s %*s %*s %*s %*s %*s", key) != 1) {
         fprintf(stderr, "Error: failed to scan header.\n");
@@ -323,7 +326,7 @@ int send_end_try_message(char OP_CODE[CODE_SIZE], char status[4], char PLID[PLID
         return 1;
     }
 
-    //key[KEY_SIZE] = '\0';
+    key[KEY_SIZE] = '\0';
     //fprintf(stderr, "%s\n", key);
 
     close(fd);
