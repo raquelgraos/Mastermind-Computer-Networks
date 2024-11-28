@@ -38,7 +38,8 @@ int scoreboard_s(char **args, char **message, int n_args);
 int quit_s(char **args, char **message, int n_args);
 int debug_s(char **args, char **message, int n_args);*/
 
-int open_active_game(char PLID[PLID_SIZE + 1], int *fd, char *path);
+int get_secret_key(char *key, int fd, ssize_t *total_bytes_read);
+int open_active_game(char PLID[PLID_SIZE + 1], int *fd);
 int check_ongoing_game(const char PLID[PLID_SIZE + 1]);
 int check_if_in_time(char PLID[PLID_SIZE + 1]);
 void generate_random_key(char *key);

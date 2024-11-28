@@ -291,6 +291,10 @@ int try_s(char **args, char **message, int n_args) {
     return 0;
 }
 
+/*int try_game() {
+
+}*/
+
 int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char *key, char mode) {
 
     int src;
@@ -300,36 +304,13 @@ int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char *key, char m
         return 1;
     }
 
-    if (open_active_game(PLID, &src, path))
-        return 1;
-
-    char header[HEADER_SIZE + 1];
-    char *ptr = header;
-    int n = read(src, ptr, HEADER_SIZE); // leave space for null terminator.
-    if (n == -1) {
-        fprintf(stderr, "Error: failed to read file.\n");
+    if (open_active_game(PLID, &src)) {
         free(path);
-        close(src);
         return 1;
     }
-    ssize_t total_bytes_read = n;
-    while (n != 0) {
-        ptr += n;
-        n = read(src, ptr, HEADER_SIZE - total_bytes_read); // leave space for null terminator.
-        if (n == -1) {
-            fprintf(stderr, "Error: failed to read file.\n");
-            free(path);
-            close(src);
-            return 1;
-        }
-        total_bytes_read += n;
-    }
 
-    header[HEADER_SIZE] = '\0';
-    
-    if (sscanf(header, "%*s %*s %4s %*s %*s %*s %*s %*s", key) != 1) {
-        fprintf(stderr, "Error: failed to scan header.\n");
-        close(src);
+    ssize_t total_bytes_read;
+    if (get_secret_key(key, src, &total_bytes_read)) {
         free(path);
         return 1;
     }
@@ -360,7 +341,7 @@ int end_game_after_try(int res_time, char PLID[PLID_SIZE + 1], char *key, char m
 
     char fdata[BUFSIZ]; // TODO tamanho temporario
     char *ptr_data = fdata;
-    n = read(src, ptr_data, BUFSIZ - 1); // leave space for null terminator.
+    ssize_t n = read(src, ptr_data, BUFSIZ - 1); // leave space for null terminator.
     if (n == -1) {
         free(path);
         return 1;
@@ -512,12 +493,44 @@ int debug_s(char **args, char **message, int n_args) {
 
 }*/
 
-int open_active_game(char PLID[PLID_SIZE], int *fd, char *path) {
+int get_secret_key(char *key, int fd, ssize_t *total_bytes_read) {
+
+    char header[HEADER_SIZE + 1];
+    char *ptr = header;
+    int n = read(fd, ptr, HEADER_SIZE); // leave space for null terminator.
+    if (n == -1) {
+        fprintf(stderr, "Error: failed to read file.\n");
+        close(fd);
+        return 1;
+    }
+    *total_bytes_read = n;
+    while (n != 0) {
+        ptr += n;
+        n = read(fd, ptr, HEADER_SIZE - *total_bytes_read); // leave space for null terminator.
+        if (n == -1) {
+            fprintf(stderr, "Error: failed to read file.\n");
+                close(fd);
+            return 1;
+        }
+        *total_bytes_read += n;
+    }
+
+    header[HEADER_SIZE] = '\0';
+    
+    if (sscanf(header, "%*s %*s %4s %*s %*s %*s %*s %*s", key) != 1) {
+        fprintf(stderr, "Error: failed to scan header.\n");
+        close(fd);
+        return 1;
+    }
+
+    return 0;
+}
+
+int open_active_game(char PLID[PLID_SIZE], int *fd) {
 
     int dir = chdir("server");
     if (dir != 0) {
         fprintf(stderr, "Error: failed to open server directory.\n");
-        free(path);
         return 1;
     }
 
@@ -527,14 +540,12 @@ int open_active_game(char PLID[PLID_SIZE], int *fd, char *path) {
     dir = chdir(GAMES_DIR);
     if (dir != 0) {
         fprintf(stderr, "Error: failed to open GAMES directory.\n");
-        free(path);
         return 1;
     }
 
     *fd = open(filename, O_RDWR);
     if (*fd == -1) {
         fprintf(stderr, "Error: failed to open %s file.\n", filename);
-        free(path);
         return 1;
     }
     return 0; 
@@ -588,7 +599,7 @@ int check_if_in_time(char PLID[PLID_SIZE + 1]) {
         return 1;
     }
 
-    if (open_active_game(PLID, &fd, path)) 
+    if (open_active_game(PLID, &fd)) 
         return 1;
     
     char header[HEADER_SIZE + 1];
