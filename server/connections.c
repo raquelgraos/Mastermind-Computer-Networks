@@ -44,7 +44,7 @@ int udp_connection(char *GSport, int VERBOSE) {
     while (1) {
         testfds = readfds; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=200;
+        timeout.tv_sec=90; //TODO diminuir isto
 
         // Monitor the socket for incoming data
         int out_fds = select(FD_SETSIZE, &testfds, (fd_set *) NULL, (fd_set *) NULL, (struct timeval *) &timeout);
