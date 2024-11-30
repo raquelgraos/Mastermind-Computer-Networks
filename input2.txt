@@ -1,0 +1,7 @@
+start 222222 5
+try Y Y Y Y
+try R R R R
+try G G G G
+try G O Y G
+try P P Y G
+quit

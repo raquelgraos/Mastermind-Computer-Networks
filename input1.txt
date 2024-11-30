@@ -1,0 +1,6 @@
+start 111111 60
+try R G B Y
+try R P P P
+try R G O Y
+try G O Y G
+quit

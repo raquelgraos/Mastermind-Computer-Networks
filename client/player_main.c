@@ -6,11 +6,13 @@ void print_usage(const char *prog_name) {
     fprintf(stdout, "Usage: %s [-n GSIP] [-p GSport]\n", prog_name);
     fprintf(stdout, "\t-n GSIP   : IP address of the game server (default: localhost)\n");
     fprintf(stdout, "\t-p GSport : Port of the game server (default: 58000+GN, where GN is the group number)\n");
+    //fprintf(stdout, "p from input<p>.txt \n");
 }
 
 int main(int argc, char *argv[]) {
     char *GSIP = DEFAULT_GSIP;
     char *GSport = DEFAULT_PORT;
+    //FILE *file;
 
     // Parse command line arguments
     for (int i = 1; i < argc; i++) {
@@ -18,6 +20,10 @@ int main(int argc, char *argv[]) {
             GSIP = argv[++i];
         } else if (!strcmp(argv[i], "-p") && i + 1 < argc) {
             GSport = argv[++i];
+        /*} else if (i == argc - 1) {
+            char filename[11];
+            sprintf(filename, "input%s.txt", argv[i]);
+            file = fopen(filename, "r");*/ // for multiple client testing purposes
         } else {
             fprintf(stderr, "Error: Invalid argument '%s'.\n", argv[i]);
             print_usage(argv[0]);
@@ -25,7 +31,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    char buffer[BUFSIZ];
+    char buffer[BUFSIZ]; // TODO pensar melhor nos tamanhos maximos
     char input[BUFSIZ];
     char *command_line, *command;
     int n_trials = 1;
@@ -33,7 +39,7 @@ int main(int argc, char *argv[]) {
     int active = 0; // no active game
 
     while (1) {
-        if (fgets(input, sizeof(input), stdin) != NULL) {
+        if (fgets(input, sizeof(input), stdin) != NULL) { // change from stdin to file to test with multiple clients (fgets() fails because of input buffer size)
             command_line = strtok(input, "\n");
             if (command_line == NULL || strlen(command_line) == 0) continue;  // skip empty input
             strcpy(buffer, command_line);
