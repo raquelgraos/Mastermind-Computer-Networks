@@ -293,13 +293,13 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         return 1;
     }
 
-    /*//int res_repeat = check_repeated_guess();
-    int res_repeat = 2;
-    if (res_repeat == 1) { //error
+    
+    int res_repeat = check_repeated_guess(fd, given_key);
+    if (res_repeat == 1) { 
         free(path);
         close(fd);
         return 1;
-    } else if (res_repeat == 0) { //repeated guess
+    } else if (res_repeat == 0) {
         int dir = chdir(path);
         if (dir != 0) {
             fprintf(stderr, "Error: failed to open original directory.\n");
@@ -309,10 +309,10 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         }
         free(path);
         close(fd);
-        return 3; // status = "DUP"
+        return 3; // Status = "DUP"
     }
 
-    if (trial != res_trial) { // unexpected trial
+    /*if (trial != res_trial) { // unexpected trial
         dir = chdir(path);
         if (dir != 0) {
             fprintf(stderr, "Error: failed to open original directory.\n");
@@ -326,6 +326,8 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
     }*/
 
     char secret_key[KEY_SIZE + 1];
+
+
     if (get_secret_key(secret_key, fd)) {
         free(path);
         close(fd);
@@ -384,9 +386,7 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
     return ret_value;
 }
 
-/*int check_repeated_guess() { //1 if error, 0 if repeated guess, 2 if new guess
 
-}*/
 
 int end_game(int time_passed, char PLID[PLID_SIZE + 1], char *key, char mode) {
 
@@ -771,6 +771,12 @@ bool is_valid_max_time(const char max_time_str[TIME_SIZE + 1], int len_max_time)
 
 int get_secret_key(char *key, int fd) {
 
+    // ensure the file pointer is at the beginning
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        fprintf(stderr, "Error: Failed to rewind the game file.\n");
+        return 1;
+    }
+
     char header[HEADER_SIZE + 1];
     char *ptr = header;
     int n = read(fd, ptr, HEADER_SIZE); // leave space for null terminator.
@@ -778,6 +784,7 @@ int get_secret_key(char *key, int fd) {
         fprintf(stderr, "Error: failed to read file.\n");
         return 1;
     }
+
     ssize_t total_bytes_read = n;
     while (n != 0) {
         ptr += n;
@@ -790,7 +797,7 @@ int get_secret_key(char *key, int fd) {
     }
 
     header[HEADER_SIZE] = '\0';
-    
+
     if (sscanf(header, "%*s %*s %4s %*s %*s %*s %*s %*s", key) != 1) {
         fprintf(stderr, "Error: failed to scan header.\n");
         return 1;
@@ -798,6 +805,7 @@ int get_secret_key(char *key, int fd) {
 
     return 0;
 }
+
 
 int open_active_game(char PLID[PLID_SIZE], int *fd) {
 
@@ -942,6 +950,35 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed) {
     free(path);
     return res;
 }
+
+int check_repeated_guess(int fd, const char given_key[KEY_SIZE + 1]) {
+    char buffer[128];
+    char trial_prefix[] = "T:";
+    char stored_guess[KEY_SIZE + 1];
+
+    // rewind the file descriptor to the beginning
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        fprintf(stderr, "Error: Failed to rewind the game file.\n");
+        return 1;
+    }
+
+    // goes throughh the file
+    while (read(fd, buffer, sizeof(buffer)) > 0) {
+        char *line = strtok(buffer, "\n");
+        while (line != NULL) {
+            if (strncmp(line, trial_prefix, strlen(trial_prefix)) == 0) {
+                sscanf(line, "T: %4s", stored_guess); 
+                if (strcmp(stored_guess, given_key) == 0) {
+                    return 0; // repeated guess
+                }
+            }
+            line = strtok(NULL, "\n");
+        }
+    }
+    // no repeated guess found
+    return 2;
+}
+
 
 void generate_random_key(char *key) {
     int num_colours = 6;

@@ -43,6 +43,7 @@ int get_secret_key(char *key, int fd);
 int open_active_game(char PLID[PLID_SIZE + 1], int *fd);
 int check_ongoing_game(const char PLID[PLID_SIZE + 1]);
 int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed);
+int check_repeated_guess(int fd, const char given_key[KEY_SIZE + 1]);
 void generate_random_key(char *key);
 int assemble_header(char *header, const char PLID[PLID_SIZE + 1], char *mode, const char max_time[TIME_SIZE + 1]);
 int colour_to_index(char c);
