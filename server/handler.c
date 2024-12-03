@@ -280,7 +280,7 @@ int try_s(char **args, char **message, int n_args) {
 }
 
 int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int time_passed, int *nW, int *nB) {
-
+    // we are restoring the original path only when there is no error
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
         fprintf(stderr, "Error: getcwd failed.\n");
@@ -288,9 +288,27 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
     }
 
     int fd;
-    if (open_active_game(PLID, &fd)) {
+    if (open_active_game(PLID, &fd)) { 
         free(path);
         return 1;
+    }
+
+    int res_invalid = check_invalid_game(fd, given_key, nT);
+    if (res_invalid == 1) { // error
+        free(path);
+        close(fd);
+        return 1;
+    } else if (res_invalid == 0){ //invalid
+        int dir = chdir(path);
+        if (dir != 0) {
+            fprintf(stderr, "Error: failed to open original directory.\n");
+            free(path);
+            close(fd);
+            return 1;
+        }
+        free(path);
+        close(fd);
+        return 4; // Status = "INV"
     }
 
     
@@ -312,21 +330,8 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         return 3; // Status = "DUP"
     }
 
-    /*if (trial != res_trial) { // unexpected trial
-        dir = chdir(path);
-        if (dir != 0) {
-            fprintf(stderr, "Error: failed to open original directory.\n");
-            free(path);
-            close(fd);
-            return 1;
-        }
-        free(path);
-        close(fd);
-        return 4; // status = "INV"
-    }*/
 
     char secret_key[KEY_SIZE + 1];
-
 
     if (get_secret_key(secret_key, fd)) {
         free(path);
@@ -977,6 +982,41 @@ int check_repeated_guess(int fd, const char given_key[KEY_SIZE + 1]) {
     }
     // no repeated guess found
     return 2;
+}
+
+int check_invalid_game(int fd, const char given_key[KEY_SIZE + 1], int nT) {
+    char buffer[128];
+    char previous_key[KEY_SIZE + 1] = {0};
+    int last_trial_number = 0;
+
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        fprintf(stderr, "Error: Failed to rewind the game file.\n");
+        return 1;
+    }
+
+    ssize_t bytes_read;
+    while ((bytes_read = read(fd, buffer, 128 - 1)) > 0) {
+        buffer[bytes_read] = '\0';
+        char *line = strtok(buffer, "\n");
+        while (line != NULL) {
+            if (strncmp(line, "T:", 2) == 0) { // check for trial lines
+                sscanf(line, "T: %4s", previous_key);
+                last_trial_number++;
+            }
+            line = strtok(NULL, "\n"); // move to the next line
+        }
+    }
+
+    if (bytes_read == -1) {
+        fprintf(stderr, "Error: Failed to read the game file.\n");
+        return 1; 
+    }
+    printf("nT: %d, last_trial_number: %d\n", nT, last_trial_number);
+    if (nT != last_trial_number + 1 && !(strcmp(previous_key, given_key) == 0 && nT == last_trial_number)) {
+        return 0; 
+    }
+
+    return 2; // trial is valid
 }
 
 

@@ -137,7 +137,7 @@ int try_r(char *GSIP, char *GSport, char *message) {
             fprintf(stdout, "Repeated guess.\n");
             ret_value = 1;
         } else if (args[1] != NULL && !strcmp(args[1], "INV")) {
-            fprintf(stderr, "Não percebo este erro lol\n"); //TODO
+            fprintf(stderr, "Invalid trial\n"); //TODO
             ret_value = 1;
         } else if (args[1] != NULL && !strcmp(args[1], "NOK")) {
             fprintf(stdout, "Trial is out of context.\n");
