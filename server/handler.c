@@ -2,12 +2,11 @@
 #include "gs_main.h"
 
 // MARK: START
-int start_s(char **args, char **message, int n_args) {
-
-    char OP_CODE[CODE_SIZE + 1] = "RSG";
+int start_s(char **args, char **message, int n_args, char OP_CODE[CODE_SIZE + 1]) {
 
     char status[4];
-    if (n_args != 3) {
+    printf("n_args: %d\n", n_args);
+    if (n_args != 3 && n_args != 7) {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
         if (send_simple_message(OP_CODE, status, message))
@@ -20,6 +19,7 @@ int start_s(char **args, char **message, int n_args) {
         strcpy(PLID, args[1]);
     else {
         strcpy(status, "ERR");
+        
         if (send_simple_message(OP_CODE, status, message))
             return 1;
         else return 0;
@@ -36,7 +36,6 @@ int start_s(char **args, char **message, int n_args) {
     }
 
     //fprintf(stderr, "PLID before: %s\n", PLID);
-        
     char max_time[TIME_SIZE + 1];
     if (args[2] != NULL) 
         strcpy(max_time, args[2]);
@@ -57,10 +56,22 @@ int start_s(char **args, char **message, int n_args) {
         else return 0;
     }
 
+    char key[KEY_SIZE + 1];
+    if (n_args==3) {
+        key[0] = '\0';
+    } else if (args[3] != NULL && args[4] != NULL && args[5] != NULL && args[6] != NULL) {
+        snprintf(key, KEY_SIZE + 1, "%s%s%s%s", args[3], args[4], args[5], args[6]);
+    } else {
+        fprintf(stderr, "Error: invalid key in DEBUG.\n");
+        strcpy(status, "ERR");
+        if (send_simple_message(OP_CODE, status, message))
+            return 1;
+        else return 0;
+    }
     int res = check_ongoing_game(PLID);
     //fprintf(stderr, "PLI after: %s\n", PLID);
     if (res == 0) {
-        if (start_game(PLID, max_time) == 0) { // game started successfully
+        if (start_game(PLID, max_time, key) == 0) { // game started successfully
             strcpy(status, "OK");
             if (send_simple_message(OP_CODE, status, message))
                 return 1;
@@ -83,7 +94,7 @@ int start_s(char **args, char **message, int n_args) {
     return 0;
 }
 
-int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1]) {
+int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1], char key[KEY_SIZE + 1]) {
     
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
@@ -117,7 +128,7 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
     }
 
     char header[HEADER_SIZE + 1];
-    if (assemble_header(header, PLID, "P", max_time)) {
+    if (assemble_header(header, PLID, "P", max_time, key)) {
         free(path);
         return 1;
     }
@@ -293,31 +304,12 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         return 1;
     }
 
-    int res_invalid = check_invalid_game(fd, given_key, nT);
-    if (res_invalid == 1) { // error
+    int res = check_repeated_or_invalid(fd, given_key, nT);
+    if (res == 1) { // error
         free(path);
         close(fd);
         return 1;
-    } else if (res_invalid == 0){ //invalid
-        int dir = chdir(path);
-        if (dir != 0) {
-            fprintf(stderr, "Error: failed to open original directory.\n");
-            free(path);
-            close(fd);
-            return 1;
-        }
-        free(path);
-        close(fd);
-        return 4; // Status = "INV"
-    }
-
-    
-    int res_repeat = check_repeated_guess(fd, given_key);
-    if (res_repeat == 1) { 
-        free(path);
-        close(fd);
-        return 1;
-    } else if (res_repeat == 0) {
+    } else if (res==2){
         int dir = chdir(path);
         if (dir != 0) {
             fprintf(stderr, "Error: failed to open original directory.\n");
@@ -328,6 +320,17 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         free(path);
         close(fd);
         return 3; // Status = "DUP"
+    } else if (res==3){
+        int dir = chdir(path);
+        if (dir != 0) {
+            fprintf(stderr, "Error: failed to open original directory.\n");
+            free(path);
+            close(fd);
+            return 1;
+        }
+        free(path);
+        close(fd);
+        return 4; // Status = "INV"
     }
 
 
@@ -624,11 +627,6 @@ int quit_s(char **args, char **message, int n_args) {
 
     return 0;
 }
-
-/*// MARK: DEBUG
-int debug_s(char **args, char **message, int n_args) {
-
-}*/
 
 // MARK: MESSAGES
 
@@ -956,10 +954,12 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed) {
     return res;
 }
 
-int check_repeated_guess(int fd, const char given_key[KEY_SIZE + 1]) {
+
+int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT) {
     char buffer[128];
-    char trial_prefix[] = "T:";
-    char stored_guess[KEY_SIZE + 1];
+    char previous_key[KEY_SIZE + 1] = {0};
+    int last_trial_number = 0;
+    int is_repeated = 0; 
 
     // rewind the file descriptor to the beginning
     if (lseek(fd, 0, SEEK_SET) == -1) {
@@ -967,41 +967,18 @@ int check_repeated_guess(int fd, const char given_key[KEY_SIZE + 1]) {
         return 1;
     }
 
-    // goes throughh the file
-    while (read(fd, buffer, sizeof(buffer)) > 0) {
-        char *line = strtok(buffer, "\n");
-        while (line != NULL) {
-            if (strncmp(line, trial_prefix, strlen(trial_prefix)) == 0) {
-                sscanf(line, "T: %4s", stored_guess); 
-                if (strcmp(stored_guess, given_key) == 0) {
-                    return 0; // repeated guess
-                }
-            }
-            line = strtok(NULL, "\n");
-        }
-    }
-    // no repeated guess found
-    return 2;
-}
-
-int check_invalid_game(int fd, const char given_key[KEY_SIZE + 1], int nT) {
-    char buffer[128];
-    char previous_key[KEY_SIZE + 1] = {0};
-    int last_trial_number = 0;
-
-    if (lseek(fd, 0, SEEK_SET) == -1) {
-        fprintf(stderr, "Error: Failed to rewind the game file.\n");
-        return 1;
-    }
-
     ssize_t bytes_read;
-    while ((bytes_read = read(fd, buffer, 128 - 1)) > 0) {
+    while ((bytes_read = read(fd, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[bytes_read] = '\0';
         char *line = strtok(buffer, "\n");
         while (line != NULL) {
-            if (strncmp(line, "T:", 2) == 0) { // check for trial lines
+            if (strncmp(line, "T:", 2) == 0) { 
                 sscanf(line, "T: %4s", previous_key);
                 last_trial_number++;
+                // check for repeated guess
+                if (strcmp(previous_key, given_key) == 0) {
+                    is_repeated = 1;
+                }
             }
             line = strtok(NULL, "\n"); // move to the next line
         }
@@ -1009,14 +986,21 @@ int check_invalid_game(int fd, const char given_key[KEY_SIZE + 1], int nT) {
 
     if (bytes_read == -1) {
         fprintf(stderr, "Error: Failed to read the game file.\n");
-        return 1; 
-    }
-    printf("nT: %d, last_trial_number: %d\n", nT, last_trial_number);
-    if (nT != last_trial_number + 1 && !(strcmp(previous_key, given_key) == 0 && nT == last_trial_number)) {
-        return 0; 
+        return 1;
     }
 
-    return 2; // trial is valid
+    if (is_repeated) {
+        if (nT == last_trial_number) {
+            return 0; // repeated last guess
+        }
+        return 2; // repeated guess that wasn't the last one
+    }
+
+    if (nT != last_trial_number + 1 && !(strcmp(previous_key, given_key) == 0 && nT == last_trial_number)) {
+        return 3; // invalid trial
+    }
+
+    return 0; // valid trial
 }
 
 
@@ -1029,10 +1013,11 @@ void generate_random_key(char *key) {
     key[KEY_SIZE] = '\0';
 }
 
-int assemble_header(char *header, const char PLID[PLID_SIZE + 1], char *mode, const char max_time[TIME_SIZE + 1]) {
+int assemble_header(char *header, const char PLID[PLID_SIZE + 1], char *mode, const char max_time[TIME_SIZE + 1], char key[KEY_SIZE + 1]) {
 
-    char key[KEY_SIZE + 1];
-    generate_random_key(key);
+    if (key[0] == '\0') {
+        generate_random_key(key);
+    }
 
     time_t fulltime;
     struct tm *current_time;

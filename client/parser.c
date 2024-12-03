@@ -3,6 +3,7 @@
 
 int parse_command(char *command, char *GSIP, char *GSport, char *command_line, char *PLID, int *n_trials, int *active) {
     int res;
+
     if (!strcmp(command, "start")) {
         if (*active == 0) {
             res = parse_start_command(GSIP, GSport, command_line, PLID);
@@ -29,11 +30,13 @@ int parse_command(char *command, char *GSIP, char *GSport, char *command_line, c
         if (!strcmp(command, "exit")) return 1; // close terminal (even if quitting failed ??)
 
     } else if (!strcmp(command, "debug")) {
-        res = parse_debug_command(GSIP, GSport, command_line, PLID);
-        if (res == 0) {
-            (*active) = 1;
-            (*n_trials) = 1; //reset trials
-        }
+        if (*active == 0) {
+            res = parse_debug_command(GSIP, GSport, command_line, PLID);
+            if (res == 0) {
+                (*active) = 1;
+                (*n_trials) = 1; //reset trials
+            } 
+        } else printf("You are already playing a game with player id %s\n", PLID);
     } else {
         fprintf(stderr, "Error: invalid command.\n");
     }
@@ -122,14 +125,14 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
 
     // if arg isn't NULL or i != 7 there are too many/few args, respectively
     if (arg != NULL || i != 7) {
-        fprintf(stderr, "Error: Debug Command requires 6 arguments.\n");
-        return 0;
+        fprintf(stderr, "Error: Debug Command requires 7 arguments.\n");
+        return 1;
     }
 
     for (int j = 3; j < 7; j++) {
         if (strlen(args[j]) != 1 || !is_valid_color(args[j][0])) {
             fprintf(stderr, "Error: Invalid colour.\n");
-            return 0;
+            return 1;
         }
     }
 

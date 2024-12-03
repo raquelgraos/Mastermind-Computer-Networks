@@ -5,6 +5,7 @@ int parse_input(char *input, char **message) {
     
     int input_len = strlen(input);
     char input_aux[input_len + 1];
+    char OP_CODE[CODE_SIZE + 1];
     strcpy(input_aux, input);
 
     int counter = 0;
@@ -37,7 +38,8 @@ int parse_input(char *input, char **message) {
 
     int res = 0;
     if (args[0] != NULL && !strcmp(args[0], "SNG")) {
-        res = start_s(args, message, counter);
+        strcpy(OP_CODE, "RSG");
+        res = start_s(args, message, counter, OP_CODE);
 
     } else if (args[0] != NULL && !strcmp(args[0], "TRY")) {
         res = try_s(args, message, counter);
@@ -51,10 +53,12 @@ int parse_input(char *input, char **message) {
     } else if (args[0] != NULL && !strcmp(args[0], "QUT")) {
        res = quit_s(args, message, counter);
 
-    } /*else if (args[0] != NULL && !strcmp(args[0], "DBG")) {
-        res = debug_s(args, message, counter);
+    } else if (args[0] != NULL && !strcmp(args[0], "DBG")) {
+        printf("%d\n", counter);
+        strcpy(OP_CODE, "RDB");
+        res = start_s(args, message, counter, OP_CODE);
 
-    } */else {
+    } else {
         *message = (char*) malloc(5);
         if (*message == NULL) {
             fprintf(stderr, "Error: Memory allocation failed.\n");
