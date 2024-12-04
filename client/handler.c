@@ -97,7 +97,7 @@ int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials) {
     }
 
     char n_trials_str[TRIALS_SIZE + 1];
-    sprintf(n_trials_str, "%d", 1);// change n_trials to 1 to test inv
+    sprintf(n_trials_str, "%d", n_trials);// change n_trials to 1 to test inv
     memcpy(ptr, n_trials_str, strlen(n_trials_str));
     ptr += strlen(n_trials_str);
 
