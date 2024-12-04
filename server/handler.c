@@ -241,6 +241,7 @@ int try_s(char **args, char **message, int n_args) {
 int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int time_passed, int *nW, int *nB) {
     // we are restoring the original path only when there is no error
     char *path = getcwd(NULL, 0);
+    int client_retry = 0;
     if (path == NULL) {
         fprintf(stderr, "Error: getcwd failed.\n");
         return 1;
@@ -280,6 +281,8 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         free(path);
         close(fd);
         return 4; // Status = "INV"
+    } else if (res==4){
+        client_retry = 1; // client might not have gotten the message
     }
 
 
@@ -314,33 +317,33 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
     else ret_value = 2;
 
     fprintf(stderr, "guessed key: %s\n", given_key);
+    if (!client_retry){
+       char trial_str[40]; //TODO pensar no size disto
+        sprintf(trial_str, "T: %s %d %d %d\n", given_key, *nB, *nW, time_passed);
 
-    char trial_str[40]; //TODO pensar no size disto
-    sprintf(trial_str, "T: %s %d %d %d\n", given_key, *nB, *nW, time_passed);
+        if (lseek(fd, 0, SEEK_END) == -1) {
+            fprintf(stderr, "Error: Failed to seek to the start of the file.\n");
+            free(path);
+            close(fd);
+            return 1;
+        }
 
-    if (lseek(fd, 0, SEEK_END) == -1) {
-        fprintf(stderr, "Error: Failed to seek to the start of the file.\n");
-        free(path);
+        ssize_t n = write(fd, trial_str, strlen(trial_str));
+        if (n == -1) {
+            fprintf(stderr, "Error: Failed to write trial in file.\n");
+            free(path);
+            close(fd);
+            return 1;
+        }
+        
         close(fd);
-        return 1;
     }
-
-    ssize_t n = write(fd, trial_str, strlen(trial_str));
-    if (n == -1) {
-        fprintf(stderr, "Error: Failed to write trial in file.\n");
-        free(path);
-        close(fd);
-        return 1;
-    }
-    
-    close(fd);
-
     int dir = chdir(path);
-    if (dir != 0) {
-        fprintf(stderr, "Error: failed to open original directory.\n");
-        return 1;
-    }
-    free(path);
+        if (dir != 0) {
+            fprintf(stderr, "Error: failed to open original directory.\n");
+            return 1;
+        }
+        free(path); 
 
     return ret_value;
 }
@@ -932,12 +935,12 @@ int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT
 
     if (is_repeated) {
         if (nT == last_trial_number) {
-            return 0; // repeated last guess
+            return 4; // repeated last guess
         }
         return 2; // repeated guess that wasn't the last one
     }
 
-    if (nT != last_trial_number + 1 && !(strcmp(previous_key, given_key) == 0 && nT == last_trial_number)) {
+    if (nT != last_trial_number + 1 && !(is_repeated && nT == last_trial_number)) {
         return 3; // invalid trial
     }
 
