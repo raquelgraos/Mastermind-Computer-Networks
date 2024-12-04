@@ -3,168 +3,130 @@
 
 // MARK: START
 int start_s(char **args, char **message, int n_args, char OP_CODE[CODE_SIZE + 1]) {
-
     char status[4];
-    printf("n_args: %d\n", n_args);
+
+    // validate number of arguments
     if (n_args != 3 && n_args != 7) {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
 
-    char PLID[PLID_SIZE + 1];
-    if (args[1] != NULL) 
-        strcpy(PLID, args[1]);
-    else {
-        strcpy(status, "ERR");
-        
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
-    }
-
-    PLID[PLID_SIZE] = '\0';
-
-    if (!is_valid_PLID(PLID)) {
+    // validate and extract PLID
+    if (args[1] == NULL || !is_valid_PLID(args[1])) {
         fprintf(stderr, "Error: invalid PLID.\n");
         strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
+    char PLID[PLID_SIZE + 1];
+    strncpy(PLID, args[1], PLID_SIZE);
+    PLID[PLID_SIZE] = '\0';
 
-    //fprintf(stderr, "PLID before: %s\n", PLID);
-    char max_time[TIME_SIZE + 1];
-    if (args[2] != NULL) 
-        strcpy(max_time, args[2]);
-    else {
-        strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
-    }
-
-    max_time[TIME_SIZE] = '\0';
-
-    if (!is_valid_max_time(max_time, 3)) {
+    // validate and extract max_time
+    if (args[2] == NULL || !is_valid_max_time(args[2], TIME_SIZE)) {
         fprintf(stderr, "Error: invalid max time.\n");
         strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
+    }
+    char max_time[TIME_SIZE + 1];
+    strncpy(max_time, args[2], TIME_SIZE);
+    max_time[TIME_SIZE] = '\0';
+
+    // verify and extract key
+    char key[KEY_SIZE + 1] = {0}; // Initialize as empty key
+    if (n_args == 7) {
+        if (args[3] && args[4] && args[5] && args[6]) {
+            snprintf(key, KEY_SIZE + 1, "%s%s%s%s", args[3], args[4], args[5], args[6]);
+        } else {
+            fprintf(stderr, "Error: invalid key in DEBUG.\n");
+            strcpy(status, "ERR");
+            return send_simple_message(OP_CODE, status, message);
+        }
     }
 
-    char key[KEY_SIZE + 1];
-    if (n_args==3) {
-        key[0] = '\0';
-    } else if (args[3] != NULL && args[4] != NULL && args[5] != NULL && args[6] != NULL) {
-        snprintf(key, KEY_SIZE + 1, "%s%s%s%s", args[3], args[4], args[5], args[6]);
-    } else {
-        fprintf(stderr, "Error: invalid key in DEBUG.\n");
-        strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
-    }
+    // check ongoing game
     int res = check_ongoing_game(PLID);
-    //fprintf(stderr, "PLI after: %s\n", PLID);
     if (res == 0) {
-        if (start_game(PLID, max_time, key) == 0) { // game started successfully
+        // ctart a new game
+        if (start_game(PLID, max_time, key) == 0) {
             strcpy(status, "OK");
-            if (send_simple_message(OP_CODE, status, message))
-                return 1;
-            else return 0;
         } else {
             strcpy(status, "ERR");
-            if (send_simple_message(OP_CODE, status, message))
-                return 1;
-            else return 0;
         }
     } else if (res == 2) {
-        strcpy(status, "NOK"); // ongoing game already
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
-    } else if (res == 1) {
-        return 1; //error
+        strcpy(status, "NOK"); // ongoing game detected
+    } else {
+        return 1; // error in checking ongoing game
     }
 
-    return 0;
+    return send_simple_message(OP_CODE, status, message);
 }
 
+
 int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1], char key[KEY_SIZE + 1]) {
-    
-    char *path = getcwd(NULL, 0);
-    if (path == NULL) {
+    char *original_path = getcwd(NULL, 0);
+    if (original_path == NULL) {
         fprintf(stderr, "Error: getcwd failed.\n");
         return 1;
     }
 
-    int dir = chdir("server");
-    if (dir != 0) {
+    // change to server directory
+    if (chdir("server") != 0) {
         fprintf(stderr, "Error: failed to open server directory.\n");
-        free(path);
+        free(original_path);
         return 1;
     }
 
+    // prepare the filename
     char filename[ONGOING_GAME_SIZE + 1];
-    sprintf(filename, "GAME_%s.txt", PLID);
-    filename[ONGOING_GAME_SIZE] = '\0';
+    snprintf(filename, sizeof(filename), "GAME_%s.txt", PLID);
 
-    dir = chdir(GAMES_DIR);
-    if (dir != 0) {
+    // change to GAMES directory
+    if (chdir(GAMES_DIR) != 0) {
         fprintf(stderr, "Error: failed to open GAMES directory.\n");
-        free(path);
+        free(original_path);
         return 1;
     }
-    
+
+    // open or create the game file
     int fd = open(filename, O_CREAT | O_RDWR, 0644);
     if (fd == -1) {
         fprintf(stderr, "Error: failed to open %s file.\n", filename);
-        free(path);
+        free(original_path);
         return 1;
     }
 
+    // assemble the game header
     char header[HEADER_SIZE + 1];
     if (assemble_header(header, PLID, "P", max_time, key)) {
-        free(path);
+        close(fd);
+        free(original_path);
         return 1;
     }
     //fprintf(stderr, "%s", header);
 
-    char *ptr = header;
-    ssize_t len = strlen(header);    
-    ssize_t n = write(fd, ptr, len);
-    if (n == -1) {
+
+    // write the header to the file
+    ssize_t len = strlen(header);
+    if (write(fd, header, len) != len) {
         fprintf(stderr, "Error: write failed.\n");
-        free(path);
+        close(fd);
+        free(original_path);
         return 1;
     }
 
-    ssize_t total_bytes_written = n;
-    while (total_bytes_written < len) {
-        ptr += n;
-
-        n = write(fd, ptr, len - total_bytes_written);
-        if (n == -1) {
-            fprintf(stderr, "Error: write failed.\n");
-            free(path);
-            return 1;
-        }
-        total_bytes_written += n;
-    }
-
+    // close the file and return to the original directory
     close(fd);
-    dir = chdir(path);
-    if (dir != 0) {
-        fprintf(stderr, "Error: failed to open original directory.\n");
+    if (chdir(original_path) != 0) {
+        fprintf(stderr, "Error: failed to return to the original directory.\n");
+        free(original_path);
         return 1;
     }
-    free(path);
+
+    free(original_path);
     return 0;
 }
+
 
 // MARK: TRY
 int try_s(char **args, char **message, int n_args) {
@@ -179,15 +141,11 @@ int try_s(char **args, char **message, int n_args) {
             strcpy(PLID, args[1]);
         else {
             strcpy(status, "ERR");
-            if (send_simple_message(OP_CODE, status, message))
-                return 1;
-            else return 0;
+            return send_simple_message(OP_CODE, status, message);
         }
     } else {
         strcpy(status, "NOK"); // no PLID was sent (trial out of context)
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
 
     PLID[PLID_SIZE] = '\0';
@@ -195,17 +153,13 @@ int try_s(char **args, char **message, int n_args) {
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
         strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
 
     if (n_args != 7) {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
         
     char given_key[KEY_SIZE + 1];
@@ -226,9 +180,7 @@ int try_s(char **args, char **message, int n_args) {
 
     if (check_ongoing_game(PLID) == 0) { // no ongoing game to play
         strcpy(status, "NOK");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
 
     int time_passed = 0;
@@ -266,16 +218,12 @@ int try_s(char **args, char **message, int n_args) {
 
         } else if(res_try == 3) {
             strcpy(status, "DUP");
-            if (send_simple_message(OP_CODE, status, message))
-                return 1;
-            else return 0;
+            return send_simple_message(OP_CODE, status, message);
 
         } else if (res_try == 4) {
             strcpy(status, "INV");
-            if (send_simple_message(OP_CODE, status, message))
-                return 1;
-            else return 0;
-        } else if (res_try == 5) {
+            return send_simple_message(OP_CODE, status, message);
+        } else if (res_try == 5) { //por implementar certo?
             strcpy(status, "ENT");
             if (end_game(time_passed, PLID, secret_key, 'F'))
                 return 1; // error
@@ -566,15 +514,11 @@ int quit_s(char **args, char **message, int n_args) {
         else {
             strcpy(status, "ERR");
             fprintf(stderr, "here plid\n");
-            if (send_simple_message(OP_CODE, status, message))
-                return 1;
-            else return 0;
+            return send_simple_message(OP_CODE, status, message);
         }
     } else {
         strcpy(status, "NOK"); // no PLID was sent (trial out of context)
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
 
     PLID[PLID_SIZE] = '\0';
@@ -582,17 +526,13 @@ int quit_s(char **args, char **message, int n_args) {
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
         strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
 
     if (n_args != 2) {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
     }
 
     int res = check_ongoing_game(PLID);
@@ -619,9 +559,7 @@ int quit_s(char **args, char **message, int n_args) {
 
     } else if (res == 0) {
         strcpy(status, "NOK"); // no ongoing game
-        if (send_simple_message(OP_CODE, status, message))
-            return 1;
-        else return 0;
+        return send_simple_message(OP_CODE, status, message);
 
     } else if (res == 1) return 1; //error
 
