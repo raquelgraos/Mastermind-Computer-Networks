@@ -252,6 +252,7 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         return 1;
     }
 
+
     int res = check_repeated_or_invalid(fd, given_key, nT);
     if (res == 1) { // error
         free(path);
@@ -308,6 +309,8 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
 
     int ret_value;
     if ((*nB) == 4) ret_value = 0; // game won
+    else if ((*nB) !=4 && nT == 8)
+        ret_value = 5;
     else ret_value = 2;
 
     fprintf(stderr, "guessed key: %s\n", given_key);
