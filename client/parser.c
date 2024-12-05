@@ -46,10 +46,9 @@ int parse_command(char *command, char *GSIP, char *GSport, char *command_line, c
 int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
     char *PLID_aux;
     char *max_time_str;
-    char *command;
-
-    command = strtok(buffer, " ");
-
+    
+    strtok(buffer, " ");
+    
     PLID_aux = strtok(NULL, " ");
     if (PLID_aux == NULL) {
         fprintf(stderr, "Error: Start Command requires 3 arguments.\n");
