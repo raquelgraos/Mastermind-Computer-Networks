@@ -706,6 +706,7 @@ int send_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **message
 
     char nW_str[2];
     sprintf(nW_str, "%d", nW);
+    memcpy(ptr, nW_str, 1);
     ptr += 1;
 
     memcpy(ptr, "\n", 1);

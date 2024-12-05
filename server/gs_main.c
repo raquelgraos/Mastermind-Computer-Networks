@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     }
     
     pid_t udp;
-    //pid_t tcp;
+    pid_t tcp;
 
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
@@ -67,18 +67,18 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    /*tcp = fork();
+    tcp = fork();
     if (tcp == -1) {
         fprintf(stderr, "Error: TCP process creation failed.\n");
         return 1;
     } else if (tcp == 0) {
         tcp_connection(GSport, VERBOSE);
         return 0;
-    }*/
+    }
 
     int status;
     waitpid(udp, &status, 0);
-    //waitpid(tcp, &status, 0);
+    waitpid(tcp, &status, 0);
     fprintf(stdout, "Terminating server...\n");
     return 0;
 }
