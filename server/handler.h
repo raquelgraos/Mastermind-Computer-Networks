@@ -18,6 +18,7 @@
 #define DATE_SIZE 19
 #define FULLTIME_STR_SIZE 20
 #define ONGOING_GAME_SIZE 15
+#define LINE_SIZE 20
 #define COLOURS "RGBYOP"
 
 int start_s(char **args, char **message, int n_args, char OP_CODE[CODE_SIZE + 1]);
@@ -27,16 +28,21 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
 int try_s(char **args, char **message, int n_args);
 int end_game(int time_passed, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], char mode, int nT);
 int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int time_passed, int *nW, int *nB);
+int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], int nT, char playmode[2], struct tm *endtime);
 
 //int show_trials_s(char **args, char **message, int n_args);
-//int scoreboard_s(char **args, char **message, int n_args);
+
+int scoreboard_s(char **args, char **message, int n_args);
+int find_top_scores(int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2]);
+int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res);
+
+
 int quit_s(char **args, char **message, int n_args);
 
 int send_simple_message(char OP_CODE[CODE_SIZE], char status[4], char **message);
 int send_end_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_SIZE + 1], char **message);
 int send_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **message, char nT_str[2], int nW, int nB);
 
-int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], int nT, char playmode[2], struct tm *endtime);
 bool is_valid_PLID(const char PLID[PLID_SIZE + 1]);
 bool is_valid_max_time(const char max_time[TIME_SIZE + 1], int len_max_time);
 int get_header_elements(char *key, char *mode, int fd);

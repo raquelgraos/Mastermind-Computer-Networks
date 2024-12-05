@@ -109,7 +109,10 @@ int tcp_connection(char *GSport, int VERBOSE) {
     char input[TCP_MAX_BUF_SIZE];
 
     fd = socket(AF_INET,SOCK_STREAM,0); //TCP socket
-    if (fd == -1) return 1; //error
+    if (fd == -1) {
+        fprintf(stderr, "Error: TCP socket failed.\n");
+        return 1;
+    }
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family=AF_INET; //IPv4
@@ -117,27 +120,62 @@ int tcp_connection(char *GSport, int VERBOSE) {
     hints.ai_flags=AI_PASSIVE;
 
     errcode = getaddrinfo(NULL,GSport,&hints,&res);
-    if ((errcode)!= 0)/*error*/return 1;
+    if (errcode != 0) {
+        fprintf(stderr, "Error: failed to get addrinfo.\n");
+        return 1;
+    }
 
     n=bind(fd,res->ai_addr,res->ai_addrlen);
-    if (n == -1) /*error*/ return 1;
+    if (n == -1) {
+        fprintf(stderr, "Error: TCP failed to bind.\n");
+        freeaddrinfo(res);
+        close(fd);
+        return 1;
+    }
+
+    if (res != NULL) freeaddrinfo(res);
 
     if (listen(fd,5) == -1) /*error*/return 1;
 
     while (1) {
         addrlen = sizeof(addr);
-        if((newfd = accept(fd, (struct sockaddr*) &addr, &addrlen)) == -1)
-        /*error*/ return 1;
-        n = read(newfd, input, 128);
-        if (n == -1)/*error*/return 1;
+        if ((newfd = accept(fd, (struct sockaddr*) &addr, &addrlen)) == -1) {
+            close(fd);
+            return 1;
+        }
 
-        write(1,"received: ",10);write(1,input,n);
-        n = write(newfd, input, n);
-        if (n == -1)/*error*/return 1;
+        n = read(newfd, input, TCP_MAX_BUF_SIZE - 1);
+        if (n == -1) {
+            close(newfd);
+            close(fd);
+            return 1;
+        }
+        input[n] = '\0';
+
+        fprintf(stderr, "message received: %s\n", input);
+        
+        char *message = NULL;
+        if (parse_input(input, &message)) {
+            fprintf(stdout, "Failed to obtain message to send.\n");
+            close(fd);
+            if (message != NULL) free(message);
+            return 1;
+        }
+
+        fprintf(stderr, "message to send: %s", message);
+        
+        int msg_len = strlen(message);
+        n = write(newfd, input, msg_len);
+        if (n == -1) {
+            fprintf(stdout, "Error: failed to write.\n");
+            close(newfd);
+            close(fd);
+            if (message != NULL) free(message);
+            return 1;
+        }
 
         close(newfd);
     }
-    freeaddrinfo(res);
     close(fd);
     return 0;
 }

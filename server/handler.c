@@ -570,7 +570,103 @@ int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1],
 
 // MARK: SCOREBOARD
 int scoreboard_s(char **args, char **message, int n_args) {
+    
+    char OP_CODE[CODE_SIZE + 1] = "RSS";
 
+    char status[6];
+
+    int scores[10];
+    char PLIDs[10][PLID_SIZE + 1];
+    char keys[10][KEY_SIZE + 1];
+    int nTs[10];
+    char modes[10][2];
+    
+    int res = find_top_scores(scores, PLIDs, keys, nTs, modes);
+    if (res == 0) {
+        strcpy(status, "EMPTY");
+        status[5] = '\0';
+        return send_simple_message(OP_CODE, status, message);
+    }
+    /*for (int i = 0; i < res; i++) {
+        fprintf(stderr, "%d %s %s %d %s\n", scores[i], PLIDs[i], keys[i], nTs[i], modes[i]);
+    }*/
+
+    time_t fulltime;
+    char fname[15 + sizeof(time(&fulltime))];
+    sprintf(fname, "scoreboard_%ld.txt", time(&fulltime));
+
+    char *fdata = NULL;
+    assemble_fdata(&fdata, scores, PLIDs, keys, nTs, modes, res);
+    //return send_data_message();
+    return 0;
+
+}
+
+int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res) {
+
+    *fdata = (char*) malloc(LINE_SIZE*res + 1);
+    if (*fdata == NULL) {
+        fprintf(stderr, "Error: Failed to allocate fdata memory.\n");
+        return 1;
+    }
+
+    char *ptr = *fdata;
+
+    for (int i = 0; i < res; i++) {
+        char *line = (char*) malloc(LINE_SIZE + 1);
+        if (line == NULL) {
+            fprintf(stderr, "Error: Failed to allocate line memory.\n");
+            free(line);
+            return 1;  
+        }
+        int n = sprintf(line, "%03d %6s %4s %1d %1s\n", scores[i], PLIDs[i], keys[i], nTs[i], modes[i]);
+        printf("%d\n", n);
+        fprintf(stderr, "line: %s", line);
+
+        memcpy(ptr, line, LINE_SIZE);
+        ptr += LINE_SIZE;
+
+        free(line);
+    }
+    *ptr = '\0';
+
+    fprintf(stderr, "final:\n%s", *fdata);
+    return 0;
+}
+
+int find_top_scores(int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2]) {
+    struct dirent **filelist;
+    int n_entries, i_file = 0;
+    char fname[300];
+    FILE *fp;
+
+    n_entries = scandir(SCORES_DIR, &filelist, 0, alphasort);
+    if (n_entries == 0) {
+        return 0;
+    }
+
+    while (n_entries--) {
+        if (filelist[n_entries]->d_name[0] != '.' && i_file < 10) {
+            sprintf(fname, "%s/%s", SCORES_DIR, filelist[n_entries]->d_name);
+            
+            fp = fopen(fname, "r");
+            if (fp != NULL) {
+                if (fscanf(fp, "%d %s %s %d %s", 
+                        &scores[i_file], 
+                        PLIDs[i_file], 
+                        keys[i_file], 
+                        &nTs[i_file], 
+                        modes[i_file]) == 5) {
+                    ++i_file;
+                }
+                fclose(fp);
+            }
+        }
+        free(filelist[n_entries]);
+    }
+    free(filelist);
+
+    return i_file;
 }
 
 // MARK: QUIT
