@@ -2,6 +2,13 @@
 #include "player_main.h"
 #include "handler.h"
 
+volatile sig_atomic_t terminate = 0;
+
+void handle_sigint(int sig) {
+    (void)sig;
+    terminate = 1;
+}
+
 void print_usage(const char *prog_name) {
     fprintf(stdout, "Usage: %s [-n GSIP] [-p GSport]\n", prog_name);
     fprintf(stdout, "\t-n GSIP   : IP address of the game server (default: localhost)\n");
@@ -38,7 +45,9 @@ int main(int argc, char *argv[]) {
     char PLID[7];
     int active = 0; // no active game
 
-    while (1) {
+    signal(SIGINT, handle_sigint);
+
+    while (!terminate) {
         if (fgets(input, sizeof(input), stdin) != NULL) { // change from stdin to file to test with multiple clients (fgets() fails because of input buffer size)
             command_line = strtok(input, "\n");
             if (command_line == NULL || strlen(command_line) == 0) continue;  // skip empty input
@@ -46,7 +55,12 @@ int main(int argc, char *argv[]) {
             command = strtok(buffer, " ");
             if (parse_command(command, GSIP, GSport, command_line, PLID, &n_trials, &active)) return 0; // close terminal
         } else {
-            fprintf(stderr, "Error: fgets() failed.\n");
+            if (terminate) break;
+            else fprintf(stderr, "Error: fgets() failed.\n");
         }
     }
+    fprintf(stdout, "\n");
+    quit_c(GSIP, GSport, PLID);
+    fprintf(stdout, "Terminating Client...\n");
+    return 0;
 }

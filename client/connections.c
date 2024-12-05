@@ -40,14 +40,14 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
     int received = 0;
 
     for (int attempt = 1; attempt <= retries; ++attempt) {
-        printf("Attempt %d to send message...\n", attempt);
+        //printf("Attempt %d to send message...\n", attempt);
 
         n = sendto(fd, message, strlen(message), 0, res->ai_addr, res->ai_addrlen);
         if (n == -1) {
             perror("Send failed");
             continue;
         }
-        printf("Message sent successfully! Waiting for server response\n");
+        //printf("Message sent successfully! Waiting for server response\n");
 
         addrlen = sizeof(addr);
         n = recvfrom(fd, buffer_aux, sizeof(buffer_aux) - 1, 0, (struct sockaddr *)&addr, &addrlen);
@@ -55,7 +55,7 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
             printf("Couldn't receive message from server. Retrying...\n");
         } else {
             buffer_aux[n] = '\0';
-            printf("Message received successfully: %s\n", buffer_aux);
+            //printf("Message received successfully: %s\n", buffer_aux);
             received = 1;
             break;
         }
