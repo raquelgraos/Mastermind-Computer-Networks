@@ -613,20 +613,9 @@ int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], 
     char *ptr = *fdata;
 
     for (int i = 0; i < res; i++) {
-        char *line = (char*) malloc(LINE_SIZE + 1);
-        if (line == NULL) {
-            fprintf(stderr, "Error: Failed to allocate line memory.\n");
-            free(line);
-            return 1;  
-        }
-        int n = sprintf(line, "%03d %6s %4s %1d %1s\n", scores[i], PLIDs[i], keys[i], nTs[i], modes[i]);
-        printf("%d\n", n);
-        fprintf(stderr, "line: %s", line);
-
-        memcpy(ptr, line, LINE_SIZE);
-        ptr += LINE_SIZE;
-
-        free(line);
+        int written = sprintf(ptr, "%03d %6s %4s %1d %1s\n", scores[i], PLIDs[i], keys[i], nTs[i], modes[i]);
+        fprintf(stderr, "written: %d\n", written);
+        ptr += written; // = 20 = LINE_SIZE
     }
     *ptr = '\0';
 
