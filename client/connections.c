@@ -1,44 +1,76 @@
 #include "connections.h"
 
 int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
-
-    int fd,errcode;
+    int fd, errcode;
     ssize_t n;
     socklen_t addrlen;
-    struct addrinfo hints,*res;
+    struct addrinfo hints, *res;
     struct sockaddr_in addr;
     char buffer_aux[128];
 
-    fd = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
-    if (fd == - 1) /*error*/ return 1; //exit(1);
+    fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd == -1) {
+        fprintf(stderr,"Socket creation failed\n");
+        return 1;
+    }
 
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_INET;          // IPv4
-    hints.ai_socktype = SOCK_DGRAM;     // UDP socket
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;          
+    hints.ai_socktype = SOCK_DGRAM;     
 
     errcode = getaddrinfo(GSIP, GSport, &hints, &res);
-    if (errcode != 0) /*error*/ return 1; //exit(1);
+    if (errcode != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(errcode));
+        close(fd);
+        return 1;
+    }
 
-    int msg_len = strlen(message);
+    struct timeval timeout;
+    timeout.tv_sec = 5; 
+    timeout.tv_usec = 0;
+    if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        fprintf(stderr, "setsockopt failed\n");
+        freeaddrinfo(res);
+        close(fd);
+        return 1;
+    }
 
-    printf("message sent: %s\n", message);
+    
+    int retries = 3; 
+    int received = 0;
 
-    n = sendto(fd, message, msg_len, 0, res->ai_addr, res->ai_addrlen);
-    if (n == -1) /*error*/ return 1; //exit(1);
+    for (int attempt = 1; attempt <= retries; ++attempt) {
+        printf("Attempt %d to send message...\n", attempt);
 
-    //printf("output n:%ld\n", n);
+        n = sendto(fd, message, strlen(message), 0, res->ai_addr, res->ai_addrlen);
+        if (n == -1) {
+            perror("Send failed");
+            continue;
+        }
+        printf("Message sent successfully! Waiting for server response\n");
 
-    addrlen = sizeof(addr);
-    n = recvfrom(fd, buffer_aux, 128, 0, (struct sockaddr*) &addr, &addrlen);
-    if (n == -1) /*error*/ return 1; //exit(1);
+        addrlen = sizeof(addr);
+        n = recvfrom(fd, buffer_aux, sizeof(buffer_aux) - 1, 0, (struct sockaddr *)&addr, &addrlen);
+        if (n < 0) {
+            printf("Couldn't receive message from server. Retrying...\n");
+        } else {
+            buffer_aux[n] = '\0';
+            printf("Message received successfully: %s\n", buffer_aux);
+            received = 1;
+            break;
+        }
+    }
 
-    buffer_aux[n] = '\0';
+    if (!received) {
+        printf("Failed to receive message after %d attempts.\n", retries);
+        freeaddrinfo(res);
+        close(fd);
+        return 1;
+    }
 
-    char *token = strtok(buffer_aux, "\n"); // acho que isto e desnecessario
-    strcat(token, "\n");
-    printf("message received: %s\n", token);
+    strncpy(buffer, buffer_aux, 128);
+    buffer[127] = '\0';  
 
-    strcpy(buffer, token);
     freeaddrinfo(res);
     close(fd);
     return 0;
