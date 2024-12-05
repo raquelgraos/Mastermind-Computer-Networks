@@ -128,7 +128,7 @@ int try_r(char *GSIP, char *GSport, char *message) {
         while (args[args_counter] != NULL) args_counter++;
 
         if (args[1] != NULL && !strcmp(args[1], "OK")) {
-            fprintf(stdout, "Valid trial.\n");
+            fprintf(stdout, "nT:%s\nnB:%s\nnW:%s\n", args[2], args[3], args[4]);
             if (args_counter == 5 && atoi(args[3]) == 4) {
                 fprintf(stdout, "You won!\n");
                 ret_value = 2;
