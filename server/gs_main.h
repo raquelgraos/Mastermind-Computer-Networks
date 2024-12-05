@@ -11,8 +11,8 @@
 #include <sys/stat.h>
 
 #define DEFAULT_PORT "58060"
-#define GAMES_DIR "GAMES"
-#define SCORES_DIR "SCORES"
+#define GAMES_DIR "server/GAMES"
+#define SCORES_DIR "server/SCORES"
 
 int main(int argc, char *argv[]);
 

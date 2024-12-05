@@ -25,27 +25,27 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
 
 
 int try_s(char **args, char **message, int n_args);
-int end_game(int time_passed, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], char mode);
+int end_game(int time_passed, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], char mode, int nT);
 int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int time_passed, int *nW, int *nB);
 
 //int show_trials_s(char **args, char **message, int n_args);
 //int scoreboard_s(char **args, char **message, int n_args);
 int quit_s(char **args, char **message, int n_args);
-int debug_s(char **args, char **message, int n_args);
 
 int send_simple_message(char OP_CODE[CODE_SIZE], char status[4], char **message);
 int send_end_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_SIZE + 1], char **message);
 int send_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **message, char nT_str[2], int nW, int nB);
 
+int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], int nT, char playmode[2], struct tm *endtime);
 bool is_valid_PLID(const char PLID[PLID_SIZE + 1]);
 bool is_valid_max_time(const char max_time[TIME_SIZE + 1], int len_max_time);
-int get_secret_key(char *key, int fd);
+int get_header_elements(char *key, char *mode, int fd);
 int open_active_game(char PLID[PLID_SIZE + 1], int *fd);
 int check_ongoing_game(const char PLID[PLID_SIZE + 1]);
 int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed);
 int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT);
 void generate_random_key(char *key);
-int assemble_header(char *header, const char PLID[PLID_SIZE + 1], char *mode, const char max_time[TIME_SIZE + 1], char key[KEY_SIZE + 1]);
+int assemble_header(char *header, const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1], char key[KEY_SIZE + 1]);
 int colour_to_index(char c);
 
 #endif

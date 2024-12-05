@@ -34,13 +34,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int n = chdir("server");
-    if (n != 0) {
-        fprintf(stderr, "Error: failed to open server directory.\n");
-        free(path);
-        return 1;
-    }
-
     DIR* dir = opendir(GAMES_DIR);
     if (dir) 
         closedir(dir);
@@ -57,7 +50,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Error: failed to create SCORES directory.\n");
     }
 
-    n = chdir(path);
+    int n = chdir(path);
     if (n != 0) {
         fprintf(stderr, "Error (main): failed to open directory.\n");
         free(path);
