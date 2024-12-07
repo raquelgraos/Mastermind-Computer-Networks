@@ -101,7 +101,7 @@ int tcp_conn(char *GSIP, char *GSport, char *message, char buffer[MAX_BUF_SIZE])
     n = write(fd, message, msg_len);
     if (n == -1) /*error*/ return 1; //exit(1);
 
-    printf("message sent: %s\n", message);
+    printf("message sent: %s", message);
 
     char *buf_ptr = buffer;
     n = read(fd, buf_ptr, MAX_BUF_SIZE - 1); // leave space for null terminator.
@@ -117,7 +117,7 @@ int tcp_conn(char *GSIP, char *GSport, char *message, char buffer[MAX_BUF_SIZE])
 
     buffer[total_bytes_read] = '\0';
 
-    printf("message received: %s\n", buffer);
+    printf("message received: %s", buffer);
     freeaddrinfo(res);
     close(fd);
     return 0;

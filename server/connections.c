@@ -107,6 +107,8 @@ int tcp_connection(char *GSport, int VERBOSE) {
     struct addrinfo hints,*res;
     struct sockaddr_in addr;
     char input[TCP_MAX_BUF_SIZE];
+    fd_set readfds, testfds;
+    struct timeval timeout;
 
     fd = socket(AF_INET,SOCK_STREAM,0); //TCP socket
     if (fd == -1) {
@@ -137,44 +139,78 @@ int tcp_connection(char *GSport, int VERBOSE) {
 
     if (listen(fd,5) == -1) /*error*/return 1;
 
+    FD_ZERO(&readfds);         // Clear the set
+    FD_SET(fd, &readfds);      // Add the socket descriptor to the set
+
     while (1) {
-        addrlen = sizeof(addr);
-        if ((newfd = accept(fd, (struct sockaddr*) &addr, &addrlen)) == -1) {
-            close(fd);
-            return 1;
-        }
+        testfds = readfds; // Reload mask
+        memset((void *)&timeout,0,sizeof(timeout));
+        timeout.tv_sec=90; //TODO diminuir isto
 
-        n = read(newfd, input, TCP_MAX_BUF_SIZE - 1);
-        if (n == -1) {
-            close(newfd);
-            close(fd);
-            return 1;
-        }
-        input[n] = '\0';
+        // Monitor the socket for incoming data
+        int out_fds = select(FD_SETSIZE, &testfds, (fd_set *) NULL, (fd_set *) NULL, (struct timeval *) &timeout);
 
-        fprintf(stderr, "message received: %s\n", input);
-        
-        char *message = NULL;
-        if (parse_input(input, &message)) {
-            fprintf(stdout, "Failed to obtain message to send.\n");
-            close(fd);
-            if (message != NULL) free(message);
-            return 1;
-        }
+        switch(out_fds) {
+            case 0:
+                printf("\n ---------------Timeout event-----------------\n");
+                break; //what to do ?
+            case -1:
+                fprintf(stderr, "Error: select failed.\n");
+                close(fd);
+                return 1;
+            default:
+                if (FD_ISSET(fd, &testfds)) { // Check if the socket is ready
+                    addrlen = sizeof(addr);
+                    if ((newfd = accept(fd, (struct sockaddr*) &addr, &addrlen)) == -1) {
+                        close(fd);
+                        return 1;
+                    }
 
-        fprintf(stderr, "message to send: %s", message);
-        
-        int msg_len = strlen(message);
-        n = write(newfd, input, msg_len);
-        if (n == -1) {
-            fprintf(stdout, "Error: failed to write.\n");
-            close(newfd);
-            close(fd);
-            if (message != NULL) free(message);
-            return 1;
-        }
+                    n = read(newfd, input, TCP_MAX_BUF_SIZE - 1);
+                    if (n == -1) {
+                        close(newfd);
+                        close(fd);
+                        return 1;
+                    }
+                    input[n] = '\0';
 
-        close(newfd);
+                    fprintf(stderr, "message received: %s\n", input);
+                    
+                    char *message = NULL;
+                    if (parse_input(input, &message)) {
+                        fprintf(stdout, "Failed to obtain message to send.\n");
+                        close(fd);
+                        if (message != NULL) free(message);
+                        return 1;
+                    }
+
+                    fprintf(stderr, "message to send: %s", message);
+                    
+                    int msg_len = strlen(message);
+                    n = write(newfd, message, msg_len);
+                    int total_bytes_written = n;
+                    if (n == -1) {
+                        fprintf(stdout, "Error: failed to write.\n");
+                        close(newfd);
+                        close(fd);
+                        if (message != NULL) free(message);
+                        return 1;
+                    }
+                    while (total_bytes_written < msg_len) {
+                        n = write(newfd, message, msg_len);
+                        if (n == -1) {
+                            fprintf(stdout, "Error: failed to write.\n");
+                            close(newfd);
+                            close(fd);
+                            if (message != NULL) free(message);
+                            return 1;
+                        }
+                        total_bytes_written += n;
+                    }
+
+                    close(newfd);
+                }
+        }
     }
     close(fd);
     return 0;

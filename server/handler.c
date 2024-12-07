@@ -587,20 +587,23 @@ int scoreboard_s(char **args, char **message, int n_args) {
         status[5] = '\0';
         return send_simple_message(OP_CODE, status, message);
     }
-    /*for (int i = 0; i < res; i++) {
-        fprintf(stderr, "%d %s %s %d %s\n", scores[i], PLIDs[i], keys[i], nTs[i], modes[i]);
-    }*/
+
+    strcpy(status, "OK");
+    status[2] = '\0';
 
     time_t fulltime;
     char fname[30]; // pensar melhor
     sprintf(fname, "scoreboard_%ld.txt", time(&fulltime));
 
     char *fdata = NULL;
-    if (assemble_fdata(&fdata, scores, PLIDs, keys, nTs, modes, res))
+    size_t fsize = assemble_fdata(&fdata, scores, PLIDs, keys, nTs, modes, res);
+    if (fsize == 1)
         return 1;
-    fprintf(stderr, "\n%s", fdata);
-    //return send_data_message();
-    return 0;
+    //fprintf(stderr, "\n%s", fdata);
+
+    //fprintf(stderr, "fsize: %lu bytes\n", fsize);
+
+    return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
 }
 
 int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res) {
@@ -613,13 +616,15 @@ int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], 
 
     char *ptr = *fdata;
 
+    size_t fsize = 0;
     for (int i = 0; i < res; i++) {
         int written = sprintf(ptr, "%03d %6s %4s %1d %1s\n", scores[i], PLIDs[i], keys[i], nTs[i], modes[i]);
         ptr += written; // = 20 = LINE_SIZE
+        fsize += written;
     }
     *ptr = '\0';
 
-    return 0;
+    return fsize;
 }
 
 int find_top_scores(int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2]) {
@@ -725,10 +730,10 @@ int quit_s(char **args, char **message, int n_args) {
 
 // MARK: MESSAGES
 
-int send_simple_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **message) {
+int send_simple_message(char OP_CODE[CODE_SIZE + 1], char status[6], char **message) {
 
     int status_len = strlen(status);
-    *message = (char *) malloc(3 + 1 + strlen(status) + 2);
+    *message = (char *) malloc(3 + 1 + status_len + 2);
     if (*message == NULL) {
         fprintf(stderr, "Error: memory allocation failed.\n");
         return 1;
@@ -841,6 +846,58 @@ int send_end_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_S
     //fprintf(stderr, "%s", *message);
 
     return 0;
+}
+
+int send_data_message(char OP_CODE[CODE_SIZE + 1], char status[6], char fname[30], size_t fsize, char *fdata, char **message) {
+
+    int status_len = strlen(status);
+    int fname_len = strlen(fname);
+
+    char fsize_str[5];
+    sprintf(fsize_str, "%lu", fsize);
+    int fsize_len = strlen(fsize_str);
+
+    *message = (char *) malloc(CODE_SIZE + 1 + status_len + 1 + fname_len + 1 + fsize_len + fsize + 2);
+    if (*message == NULL) {
+        fprintf(stderr, "Error: memory allocation failed.\n");
+        return 1;
+    }
+    char *ptr = *message;
+
+    memcpy(ptr, OP_CODE, CODE_SIZE);
+    ptr += CODE_SIZE;
+
+    memcpy(ptr, " ", 1);
+    ptr += 1;
+
+    memcpy(ptr, status, status_len);
+    ptr += status_len;
+
+    memcpy(ptr, " ", 1);
+    ptr += 1;
+
+    memcpy(ptr, fname, fname_len);
+    ptr += fname_len;
+
+    memcpy(ptr, " ", 1);
+    ptr += 1;
+
+    memcpy(ptr, fsize_str, fsize_len);
+    ptr += fsize_len;
+
+    memcpy(ptr, " ", 1);
+    ptr += 1;
+
+    memcpy(ptr, fdata, fsize);
+    ptr += fsize;
+
+    memcpy(ptr, "\n", 1);
+    ptr += 1;
+
+    *ptr = '\0';
+
+    return 0;
+
 }
 
 // MARK: Extras

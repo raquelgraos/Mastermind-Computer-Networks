@@ -39,9 +39,10 @@ int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], 
 
 int quit_s(char **args, char **message, int n_args);
 
-int send_simple_message(char OP_CODE[CODE_SIZE], char status[4], char **message);
+int send_simple_message(char OP_CODE[CODE_SIZE], char status[6], char **message);
 int send_end_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_SIZE + 1], char **message);
 int send_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **message, char nT_str[2], int nW, int nB);
+int send_data_message(char OP_CODE[CODE_SIZE + 1], char status[6], char fname[30], size_t fsize, char *fdata, char **message);
 
 bool is_valid_PLID(const char PLID[PLID_SIZE + 1]);
 bool is_valid_max_time(const char max_time[TIME_SIZE + 1], int len_max_time);

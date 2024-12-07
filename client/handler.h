@@ -27,6 +27,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message);
 
 void show_sb_c(char *GSIP, char *GSport);
 void show_sb_r(char *GSIP, char *GSport, char *message);
+int display_scores(int fd, ssize_t fsize);
 
 int quit_c(char *GSIP, char *GSport, char *PLID);
 int quit_r(char *GSIP, char *GSport, char *message);

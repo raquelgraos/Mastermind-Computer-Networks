@@ -407,8 +407,13 @@ void show_sb_r(char *GSIP, char *GSport, char *message) {
 
                 total_bytes_written += n;
             }
+            if (display_scores(fd, fsize)) {
+                free(path);
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                return;
+            }
             close(fd);
-            //display_scores(fd); //TODO
             dir = chdir(path);
             if (dir != 0)
                 fprintf(stderr, "Error: failed to return to original directory.\n");
@@ -418,6 +423,33 @@ void show_sb_r(char *GSIP, char *GSport, char *message) {
 
     for (int i = 0; args[i] != NULL; i++) free(args[i]);
     free(args);
+}
+
+int display_scores(int fd, ssize_t fsize) {
+    char buffer[fsize + 1];
+
+    if (lseek(fd, 0, SEEK_SET) == -1) {
+        fprintf(stderr, "Error: Failed to rewind the game file.\n");
+        return 1;
+    }
+    int n = read(fd, buffer, fsize);
+    int total_bytes_read = n;
+    if (n == -1) {
+        fprintf(stderr, "Error: read failed.\n");
+        return 1;
+    }
+    while (total_bytes_read < fsize) {
+       int n = read(fd, buffer, fsize);
+        if (n == -1) {
+            fprintf(stderr, "Error: read failed.\n");
+            return 1;
+        } 
+    }
+
+    buffer[fsize] = '\0';
+
+    fprintf(stdout, "%s", buffer);
+    return 0;
 }
 
 // MARK: QUIT
