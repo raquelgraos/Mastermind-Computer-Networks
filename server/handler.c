@@ -592,19 +592,20 @@ int scoreboard_s(char **args, char **message, int n_args) {
     }*/
 
     time_t fulltime;
-    char fname[15 + sizeof(time(&fulltime))];
+    char fname[30]; // pensar melhor
     sprintf(fname, "scoreboard_%ld.txt", time(&fulltime));
 
     char *fdata = NULL;
-    assemble_fdata(&fdata, scores, PLIDs, keys, nTs, modes, res);
+    if (assemble_fdata(&fdata, scores, PLIDs, keys, nTs, modes, res))
+        return 1;
+    fprintf(stderr, "\n%s", fdata);
     //return send_data_message();
     return 0;
-
 }
 
 int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res) {
 
-    *fdata = (char*) malloc(LINE_SIZE*res + 1);
+    *fdata = (char*) malloc((LINE_SIZE + 1) * res + 1);
     if (*fdata == NULL) {
         fprintf(stderr, "Error: Failed to allocate fdata memory.\n");
         return 1;
@@ -614,12 +615,10 @@ int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], 
 
     for (int i = 0; i < res; i++) {
         int written = sprintf(ptr, "%03d %6s %4s %1d %1s\n", scores[i], PLIDs[i], keys[i], nTs[i], modes[i]);
-        fprintf(stderr, "written: %d\n", written);
         ptr += written; // = 20 = LINE_SIZE
     }
     *ptr = '\0';
 
-    fprintf(stderr, "final:\n%s", *fdata);
     return 0;
 }
 
