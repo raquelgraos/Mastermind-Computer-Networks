@@ -605,7 +605,7 @@ int scoreboard_s(char **args, char **message, int n_args) {
 
 int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res) {
 
-    *fdata = (char*) malloc((LINE_SIZE + 1) * res + 1);
+    *fdata = (char*) malloc((LINE_SIZE + 1) * res);
     if (*fdata == NULL) {
         fprintf(stderr, "Error: Failed to allocate fdata memory.\n");
         return 1;
