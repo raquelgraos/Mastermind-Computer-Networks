@@ -1275,6 +1275,8 @@ int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT
         return 1;
     }
 
+    fprintf(stderr, "last trial number: %d\n", last_trial_number);
+
     if (is_repeated) {
         if (nT == last_trial_number) {
             return 4; // repeated last guess
@@ -1290,6 +1292,7 @@ int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT
 }
 
 void generate_random_key(char *key) {
+    srand(time(NULL));
     int num_colours = 6;
     for (int i = 0; i < KEY_SIZE; i++) {
         int random_index = rand() % num_colours;
