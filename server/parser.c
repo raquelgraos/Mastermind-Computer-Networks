@@ -44,8 +44,8 @@ int parse_input(char *input, char **message) {
     } else if (args[0] != NULL && !strcmp(args[0], "TRY")) {
         res = try_s(args, message, counter);
 
-    /*} else if (args[0] != NULL && !strcmp(args[0], "STR")) {
-        res = show_trials_s(args, message, counter);*/
+    } else if (args[0] != NULL && !strcmp(args[0], "STR")) {
+        res = show_trials_s(args, message, counter);
 
     } else if (args[0] != NULL && !strcmp(args[0], "SSB")) {
         res = scoreboard_s(args, message, counter);

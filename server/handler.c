@@ -175,7 +175,8 @@ int try_s(char **args, char **message, int n_args) {
     }
 
     int time_passed = 0;
-    int res_time = check_if_in_time(PLID, &time_passed);
+    int remaining_time;
+    int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
 
     char secret_key[KEY_SIZE + 1];
 
@@ -564,9 +565,154 @@ int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1],
 }
 
 // MARK: SHOW_TRIALS
-// int show_trials_s(char **args, char **message, int n_args) {
-//
-//}
+int show_trials_s(char **args, char **message, int n_args) {
+
+    char OP_CODE[CODE_SIZE + 1] = "RST";
+
+    char status[4];
+
+    if (n_args == 2) {
+        if (args[1] == NULL || !is_valid_PLID(args[1])) {
+            fprintf(stderr, "Error: invalid PLID.\n");
+            strcpy(status, "NOK");
+            return send_simple_message(OP_CODE, status, message);
+        }
+
+    } else {
+        fprintf(stderr, "Error: invalid number of args.\n");
+        strcpy(status, "NOK");
+        return send_simple_message(OP_CODE, status, message);
+    }
+
+    char PLID[PLID_SIZE + 1];
+    strncpy(PLID, args[1], PLID_SIZE);
+
+    time_t fulltime;
+    char fname[30]; // TODO pensar melhor
+    sprintf(fname, "trials_%ld.txt", time(&fulltime));
+
+    char *fdata = NULL;
+    if (check_ongoing_game(PLID) == 2) { // active game
+        strcpy(status, "ACT");
+
+        char file[strlen(GAMES_DIR) + 1 + PLID_SIZE + 4 + 1];
+        sprintf(file, "%s/GAME_%s.txt", GAMES_DIR, PLID);
+
+        size_t fsize = assemble_fdata_st(file, &fdata, 1);
+        if (fsize == 1) return 1;
+
+        return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
+    } 
+
+    char file[strlen(GAMES_DIR) + 22];
+    int res = find_last_game(PLID, file);
+
+    if (res == 0) {
+        strcpy(status, "NOK");
+        return send_simple_message(OP_CODE, status, message);
+
+    } else {
+        strcpy(status, "FIN");
+        size_t fsize = assemble_fdata_st(file, &fdata, 0);
+        if (fsize == 1) return 1;
+        
+        return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
+    }
+}
+
+int assemble_fdata_st(char *file, char **fdata, int act) {
+
+    char keys[8][5];
+    char nB[8][2];
+    char nW[8][2];
+
+    int count = 0;
+
+    int remaining_time;
+    if (act) {
+        char PLID[PLID_SIZE + 1];
+        char file_cpy[strlen(file)];
+        strcpy(file_cpy, file);
+        if (sscanf(file_cpy, "server/GAMES/GAME_%6s.txt", PLID) != 1) {
+            fprintf(stderr, "Error: sscanf() failed.\n");
+            return 1;
+        }
+
+        int time_passed;
+        if (check_if_in_time(PLID, &time_passed, &remaining_time) == 1) {
+            return 1;
+        }
+    }
+
+    FILE *fd = fopen(file, "r");
+    if (fd == NULL) {
+        fprintf(stderr, "Error: Failed to open %s file.\n", file);
+        return 1;
+    }
+
+    char line[LINE_SIZE_ST + 3];
+    while (fgets(line, LINE_SIZE_ST + 2, fd)) {
+        if (!strncmp(line, "T:", 2)) {
+            if (sscanf(line, "T: %4s %1s %1s %*d\n", keys[count], nB[count], nW[count]) == 3)
+                count++;
+        }
+        
+    }
+
+    if (act) 
+        *fdata = (char*) malloc((LINE_SIZE_ST + 1) * count + sizeof(int) + 2);
+    else 
+        *fdata = (char*) malloc((LINE_SIZE_ST + 1) * count);
+    
+    if (*fdata == NULL) {
+        fprintf(stderr, "Error: failed to allocate memory.\n");
+        return 1;    
+    }
+
+    char *ptr = *fdata;
+
+    size_t fsize = 0;
+    for (int i = 0; i < count; i++) {
+        int written = sprintf(ptr, "%4s %1s %1s\n", keys[i], nB[i], nW[i]);
+        ptr += written;
+        fsize += written;
+    }
+
+    if (act) {
+        int written = sprintf(ptr, "%d\n", remaining_time);
+        ptr += written;
+        fsize += written;
+    }
+    *ptr = '\0';
+    fprintf(stderr, "fdata:\n%s", *fdata);
+    return fsize;
+}
+
+int find_last_game(char PLID[PLID_SIZE + 1], char *fname) {
+    
+    struct dirent **filelist;
+    int n_entries, found;
+    char dirname[20];
+
+    sprintf(dirname, "%s/%s/", GAMES_DIR, PLID);
+
+    n_entries = scandir(dirname, &filelist, 0, alphasort);
+
+    found = 0;
+
+    if (n_entries <= 0) return 0;
+    else {
+        while (n_entries--) {
+            if (filelist[n_entries]->d_name[0] != '.' && !found) {
+                sprintf(fname, "%s%s", dirname, filelist[n_entries]->d_name);
+                found = 1;
+            }
+            free(filelist[n_entries]);
+        }
+        free(filelist);
+    }
+    return found;
+}
 
 // MARK: SCOREBOARD
 int scoreboard_s(char **args, char **message, int n_args) {
@@ -592,11 +738,11 @@ int scoreboard_s(char **args, char **message, int n_args) {
     status[2] = '\0';
 
     time_t fulltime;
-    char fname[30]; // pensar melhor
+    char fname[30]; // TODO pensar melhor
     sprintf(fname, "scoreboard_%ld.txt", time(&fulltime));
 
     char *fdata = NULL;
-    size_t fsize = assemble_fdata(&fdata, scores, PLIDs, keys, nTs, modes, res);
+    size_t fsize = assemble_fdata_sb(&fdata, scores, PLIDs, keys, nTs, modes, res);
     if (fsize == 1)
         return 1;
     //fprintf(stderr, "\n%s", fdata);
@@ -606,9 +752,9 @@ int scoreboard_s(char **args, char **message, int n_args) {
     return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
 }
 
-int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res) {
+int assemble_fdata_sb(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res) {
 
-    *fdata = (char*) malloc((LINE_SIZE + 1) * res);
+    *fdata = (char*) malloc((LINE_SIZE_SB + 1) * res);
     if (*fdata == NULL) {
         fprintf(stderr, "Error: Failed to allocate fdata memory.\n");
         return 1;
@@ -619,7 +765,7 @@ int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], 
     size_t fsize = 0;
     for (int i = 0; i < res; i++) {
         int written = sprintf(ptr, "%03d %6s %4s %1d %1s\n", scores[i], PLIDs[i], keys[i], nTs[i], modes[i]);
-        ptr += written; // = 20 = LINE_SIZE
+        ptr += written;
         fsize += written;
     }
     *ptr = '\0';
@@ -700,8 +846,8 @@ int quit_s(char **args, char **message, int n_args) {
     int res = check_ongoing_game(PLID);
     if (res == 2) { // ongoing game
         int time_passed;
-        
-        int res_time = check_if_in_time(PLID, &time_passed);
+        int remaining_time;
+        int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
         /*if (res_time == 2) { // exceeded time 
             end_game()
         } */ //TODO se o tempo ja tiver terminado mostramos a solução na mesma ou so encerramos o jogo quietly?
@@ -896,6 +1042,8 @@ int send_data_message(char OP_CODE[CODE_SIZE + 1], char status[6], char fname[30
 
     *ptr = '\0';
 
+    free(fdata);
+
     return 0;
 
 }
@@ -1019,7 +1167,7 @@ int check_ongoing_game(const char PLID[PLID_SIZE + 1]) {
     return ret_value;
 }
 
-int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed) {
+int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_time) {
     
     int fd;
     char *path = getcwd(NULL, 0);
@@ -1077,7 +1225,8 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed) {
     int res = 0;
 
     *time_passed = current_time - fulltime;
-    if (*time_passed >= max_time)
+    *remaining_time = max_time - *time_passed;
+    if (*remaining_time <= 0)
         res = 2; // max_time exceeded
 
     close(fd);

@@ -18,7 +18,8 @@
 #define DATE_SIZE 19
 #define FULLTIME_STR_SIZE 20
 #define ONGOING_GAME_SIZE 15
-#define LINE_SIZE 20
+#define LINE_SIZE_SB 20
+#define LINE_SIZE_ST 12
 #define COLOURS "RGBYOP"
 
 int start_s(char **args, char **message, int n_args, char OP_CODE[CODE_SIZE + 1]);
@@ -30,12 +31,13 @@ int end_game(int time_passed, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], 
 int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int time_passed, int *nW, int *nB);
 int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], int nT, char playmode[2], struct tm *endtime);
 
-//int show_trials_s(char **args, char **message, int n_args);
+int show_trials_s(char **args, char **message, int n_args);
+int assemble_fdata_st(char *file, char **fdata, int act);
+int find_last_game(char PLID[PLID_SIZE + 1], char *fname);
 
 int scoreboard_s(char **args, char **message, int n_args);
 int find_top_scores(int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2]);
-int assemble_fdata(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res);
-
+int assemble_fdata_sb(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res);
 
 int quit_s(char **args, char **message, int n_args);
 
@@ -49,7 +51,7 @@ bool is_valid_max_time(const char max_time[TIME_SIZE + 1], int len_max_time);
 int get_header_elements(char *key, char *mode, int fd);
 int open_active_game(char PLID[PLID_SIZE + 1], int *fd);
 int check_ongoing_game(const char PLID[PLID_SIZE + 1]);
-int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed);
+int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_time);
 int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT);
 void generate_random_key(char *key);
 int assemble_header(char *header, const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1], char key[KEY_SIZE + 1]);

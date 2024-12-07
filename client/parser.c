@@ -98,13 +98,13 @@ int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7
     // if arg isn't NULL or i != 5 there are too many/few args, respectively
     if (arg != NULL || i != 5) {
         fprintf(stderr, "Error: Try Command requires 4 arguments.\n");
-        return 0;
+        return 1;
     }
 
     for (int j = 1; j < 5; j++) {
         if (strlen(args[j]) != 1 || !is_valid_color(args[j][0])) {
             fprintf(stderr, "Error: Invalid colour.\n");
-            return 0;
+            return 1;
         }
     }
 
