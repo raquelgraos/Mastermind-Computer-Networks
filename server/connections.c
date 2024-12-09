@@ -1,6 +1,13 @@
 #include "connections.h"
 #include "parser.h"
 
+volatile sig_atomic_t terminate = 0;
+
+void handle_sigint(int sig) {
+    (void)sig;
+    terminate = 1;
+}
+
 int udp_connection(char *GSport, int VERBOSE) {
     int fd, errcode;
     ssize_t n;
@@ -41,7 +48,9 @@ int udp_connection(char *GSport, int VERBOSE) {
     FD_ZERO(&readfds);         // Clear the set
     FD_SET(fd, &readfds);      // Add the socket descriptor to the set
 
-    while (1) {
+    signal(SIGINT, handle_sigint);
+
+    while (!terminate) {
         testfds = readfds; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
         timeout.tv_sec=90; //TODO diminuir isto
@@ -54,6 +63,7 @@ int udp_connection(char *GSport, int VERBOSE) {
                 printf("\n ---------------Timeout event-----------------\n");
                 break; //what to do ?
             case -1:
+                if (terminate) break;
                 fprintf(stderr, "Error: select failed.\n");
                 close(fd);
                 return 1;
@@ -149,7 +159,9 @@ int tcp_connection(char *GSport, int VERBOSE) {
     FD_ZERO(&readfds);         // Clear the set
     FD_SET(fd, &readfds);      // Add the socket descriptor to the set
 
-    while (1) {
+    signal(SIGINT, handle_sigint);
+
+    while (!terminate) {
         testfds = readfds; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
         timeout.tv_sec=90; //TODO diminuir isto
@@ -162,6 +174,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
                 printf("\n ---------------Timeout event-----------------\n");
                 break; //what to do ?
             case -1:
+                if (terminate) break;
                 fprintf(stderr, "Error: select failed.\n");
                 close(fd);
                 return 1;
@@ -172,7 +185,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
                         close(fd);
                         return 1;
                     }
-                    
+
                     if(VERBOSE){
                         char *ip = inet_ntoa(addr.sin_addr);
                         int port = ntohs(addr.sin_port);

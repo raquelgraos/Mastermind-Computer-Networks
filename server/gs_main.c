@@ -1,6 +1,11 @@
 #include "gs_main.h"
 #include "connections.h"
 
+void sigint_handler(int sig) {
+    (void)sig;
+    printf("\nTerminating Server...\n");
+}
+
 void print_usage(const char *prog_name) {
     fprintf(stdout, "Usage: %s [-p GSport] [-v]\n", prog_name);
     fprintf(stdout, "\t-p GSport : Port of the game server (default: 58000+GN, where GN is the group number)\n");
@@ -8,7 +13,7 @@ void print_usage(const char *prog_name) {
 }
 
 int main(int argc, char *argv[]) {
-
+    signal(SIGINT, sigint_handler);
     char *GSport = DEFAULT_PORT;
 
     int VERBOSE = 0;
@@ -79,6 +84,6 @@ int main(int argc, char *argv[]) {
     int status;
     waitpid(udp, &status, 0);
     waitpid(tcp, &status, 0);
-    fprintf(stdout, "Terminating server...\n");
+    fprintf(stdout, "Connections closed\n");
     return 0;
 }
