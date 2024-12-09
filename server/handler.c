@@ -489,9 +489,8 @@ int end_game(int time_passed, char PLID[PLID_SIZE + 1], char *key, char mode, in
     free(path);
 
     if (mode == 'W'){
-        //int score = calculate_score();
+        int score = 999 - time_passed - (nT-1)*(399/8); // max score - time passed - (number of trials-1)*((max score- maxtime)/max number of trials)
         fprintf(stderr, "Here!\n");
-        int score = 54;
         write_to_scores(score, PLID, key, nT, playmode, end_time);        
     }
 
