@@ -1,7 +1,7 @@
 #include "parser.h"
 #include "handler.h"
 
-int parse_input(char *input, char **message) {
+int parse_input(char *input, char **message, int VERBOSE) {
     
     int input_len = strlen(input);
     char input_aux[input_len + 1];
@@ -34,6 +34,14 @@ int parse_input(char *input, char **message) {
     size_t len = strlen(last_arg);
     if (len > 0 && last_arg[len - 1] == '\n') {
         last_arg[len - 1] = '\0'; // Remove the newline character.
+    }
+
+    if (VERBOSE) {
+        if (counter == 1) {
+            fprintf(stdout, "Request Type: %s\n", args[0]);
+        } else if (counter > 1) {
+            fprintf(stdout, "PLID: %s\nRequest Type: %s\n", args[1], args[0]);
+        }
     }
 
     int res = 0;

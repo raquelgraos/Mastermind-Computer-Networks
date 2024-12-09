@@ -67,14 +67,21 @@ int udp_connection(char *GSport, int VERBOSE) {
                         close(fd);
                         return 1;
                     }
+                    if(VERBOSE){
+                        char *ip = inet_ntoa(addr.sin_addr);
+                        int port = ntohs(addr.sin_port);
+                        fprintf(stdout, "Player IP: %s\n", ip);
+                        fprintf(stdout, "Player Port: %d\n", port);
 
+                    }
+    
                     //fprintf(stderr, "input n: %ld\n",n);
                     input[n] = '\0';
 
                     fprintf(stderr, "message received: %s\n", input);
 
                     char *message = NULL;
-                    if (parse_input(input, &message)) {
+                    if (parse_input(input, &message, VERBOSE)) {
                         fprintf(stdout, "Failed to obtain message to send.\n");
                         close(fd);
                         if (message != NULL) free(message);
@@ -165,6 +172,14 @@ int tcp_connection(char *GSport, int VERBOSE) {
                         close(fd);
                         return 1;
                     }
+                    
+                    if(VERBOSE){
+                        char *ip = inet_ntoa(addr.sin_addr);
+                        int port = ntohs(addr.sin_port);
+                        fprintf(stdout, "Player IP: %s\n", ip);
+                        fprintf(stdout, "Player Port: %d\n", port);
+
+                    }
 
                     n = read(newfd, input, TCP_MAX_BUF_SIZE - 1);
                     if (n == -1) {
@@ -177,7 +192,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
                     fprintf(stderr, "message received: %s\n", input);
                     
                     char *message = NULL;
-                    if (parse_input(input, &message)) {
+                    if (parse_input(input, &message, VERBOSE)) {
                         fprintf(stdout, "Failed to obtain message to send.\n");
                         close(fd);
                         if (message != NULL) free(message);

@@ -4,6 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-int parse_input(char *input, char **message);
+int parse_input(char *input, char **message, int VERBOSE);
 
 #endif
