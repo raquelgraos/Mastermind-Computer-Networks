@@ -585,6 +585,7 @@ int show_trials_s(char **args, char **message, int n_args) {
 
     char PLID[PLID_SIZE + 1];
     strncpy(PLID, args[1], PLID_SIZE);
+    PLID[PLID_SIZE] = '\0';
 
     time_t fulltime;
     char fname[30]; // TODO pensar melhor
@@ -693,7 +694,7 @@ int find_last_game(char PLID[PLID_SIZE + 1], char *fname) {
     int n_entries, found;
     char dirname[20];
 
-    sprintf(dirname, "%s/%s/", GAMES_DIR, PLID);
+    sprintf(dirname, "%s/%s", GAMES_DIR, PLID);
 
     n_entries = scandir(dirname, &filelist, 0, alphasort);
 
@@ -703,7 +704,8 @@ int find_last_game(char PLID[PLID_SIZE + 1], char *fname) {
     else {
         while (n_entries--) {
             if (filelist[n_entries]->d_name[0] != '.' && !found) {
-                sprintf(fname, "%s%s", dirname, filelist[n_entries]->d_name);
+                sprintf(fname, "%s/%s", dirname, filelist[n_entries]->d_name);
+                printf(fname);
                 found = 1;
             }
             free(filelist[n_entries]);
@@ -875,7 +877,7 @@ int quit_s(char **args, char **message, int n_args) {
 
 // MARK: MESSAGES
 
-int send_simple_message(char OP_CODE[CODE_SIZE + 1], char status[6], char **message) {
+int send_simple_message(char OP_CODE[CODE_SIZE + 1], char *status, char **message) {
 
     int status_len = strlen(status);
     *message = (char *) malloc(3 + 1 + status_len + 2);
@@ -1112,10 +1114,10 @@ int get_header_elements(char *key, char *playmode, int fd) {
 int open_active_game(char PLID[PLID_SIZE], int *fd) {
 
     char *path = getcwd(NULL, 0);
-        if (path == NULL) {
-            fprintf(stderr, "Error: getcwd failed.\n");
-            return 1;
-        }
+    if (path == NULL) {
+        fprintf(stderr, "Error: getcwd failed.\n");
+        return 1;
+    }
 
     char filename[ONGOING_GAME_SIZE + 1];
     sprintf(filename, "GAME_%s.txt", PLID);
@@ -1153,8 +1155,13 @@ int check_ongoing_game(const char PLID[PLID_SIZE + 1]) {
     sprintf(filename, "GAME_%s.txt", PLID);
 
     int ret_value;
-    if (access(filename, F_OK) == 0) ret_value = 2; // ongoing game
-    else ret_value = 0;
+    if (access(filename, F_OK) == 0) {
+        printf("File does exist: %s\n", filename);
+        ret_value = 2; // ongoing game
+    } else {
+        printf("File does NOT exist: %s\n", filename);
+        ret_value = 0;
+    }
 
     dir = chdir(path);
     if (dir != 0) {
