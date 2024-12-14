@@ -139,7 +139,7 @@ int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID
     int len_max_time = strlen(args[2]);
 
     if (!is_valid_PLID(args[1])) {
-        fprintf(stderr, "Error: PLID must be a positive 6 digit number.\n");
+        fprintf(stderr, "Error: PLID %s must be a positive 6 digit number.\n", args[1]);
         return 1;
     }
     else if (!is_valid_max_time(args[2], len_max_time)) {

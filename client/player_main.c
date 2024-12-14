@@ -13,7 +13,6 @@ void print_usage(const char *prog_name) {
     fprintf(stdout, "Usage: %s [-n GSIP] [-p GSport]\n", prog_name);
     fprintf(stdout, "\t-n GSIP   : IP address of the game server (default: localhost)\n");
     fprintf(stdout, "\t-p GSport : Port of the game server (default: 58000+GN, where GN is the group number)\n");
-    //fprintf(stdout, "p from input<p>.txt \n");
 }
 
 int main(int argc, char *argv[]) {

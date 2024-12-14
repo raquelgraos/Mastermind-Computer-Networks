@@ -19,7 +19,6 @@ int parse_input(char *input, char **message, int VERBOSE) {
     char *arg = strtok(input, " ");
     int i = 0;
     while (arg != NULL) {
-        fprintf(stderr, "args[%d]: %s\n", i, arg);
         args[i] = (char*) malloc(strlen(arg) + 1);
         if (args[i] == NULL) {
             fprintf(stderr, "Error: Memory allocation failed.\n");
@@ -62,7 +61,6 @@ int parse_input(char *input, char **message, int VERBOSE) {
        res = quit_s(args, message, counter);
 
     } else if (args[0] != NULL && !strcmp(args[0], "DBG")) {
-        printf("%d\n", counter);
         strcpy(OP_CODE, "RDB");
         res = start_s(args, message, counter, OP_CODE);
 

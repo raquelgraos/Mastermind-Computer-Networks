@@ -95,8 +95,6 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
         free(original_path);
         return 1;
     }
-    //fprintf(stderr, "%s", header);
-
 
     // write the header to the file
     ssize_t len = strlen(header);
@@ -309,7 +307,6 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         ret_value = 5;
     else ret_value = 2;
 
-    fprintf(stderr, "guessed key: %s\n", given_key);
     if (!client_retry){
        char trial_str[40]; //TODO pensar no size disto
         sprintf(trial_str, "T: %s %d %d %d\n", given_key, *nB, *nW, time_passed);
@@ -420,8 +417,6 @@ int end_game(int time_passed, char PLID[PLID_SIZE + 1], char *key, char mode, in
 
     fdata[total_bytes_read] = '\0';
 
-    //fprintf(stderr, "read: %s\n", fdata);
-
     close(src);
 
     char filename[ONGOING_GAME_SIZE + 1];
@@ -490,7 +485,6 @@ int end_game(int time_passed, char PLID[PLID_SIZE + 1], char *key, char mode, in
 
     if (mode == 'W'){
         int score = 999 - time_passed - (nT-1)*(399/8); // max score - time passed - (number of trials-1)*((max score- maxtime)/max number of trials)
-        fprintf(stderr, "Here!\n");
         write_to_scores(score, PLID, key, nT, playmode, end_time);        
     }
 
@@ -504,8 +498,6 @@ int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1],
         fprintf(stderr, "Error: getcwd failed.\n");
         return 1;
     }
-
-    fprintf(stderr, "%s\n", path);
     
     int dir = chdir(SCORES_DIR);
     if (dir != 0) {
@@ -684,7 +676,6 @@ int assemble_fdata_st(char *file, char **fdata, int act) {
         fsize += written;
     }
     *ptr = '\0';
-    fprintf(stderr, "fdata:\n%s", *fdata);
     return fsize;
 }
 
@@ -705,7 +696,7 @@ int find_last_game(char PLID[PLID_SIZE + 1], char *fname) {
         while (n_entries--) {
             if (filelist[n_entries]->d_name[0] != '.' && !found) {
                 sprintf(fname, "%s/%s", dirname, filelist[n_entries]->d_name);
-                printf(fname);
+                //printf(fname);
                 found = 1;
             }
             free(filelist[n_entries]);
@@ -746,9 +737,6 @@ int scoreboard_s(char **args, char **message, int n_args) {
     size_t fsize = assemble_fdata_sb(&fdata, scores, PLIDs, keys, nTs, modes, res);
     if (fsize == 1)
         return 1;
-    //fprintf(stderr, "\n%s", fdata);
-
-    //fprintf(stderr, "fsize: %lu bytes\n", fsize);
 
     return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
 }
@@ -822,7 +810,6 @@ int quit_s(char **args, char **message, int n_args) {
             strcpy(PLID, args[1]);
         else {
             strcpy(status, "ERR");
-            fprintf(stderr, "here plid\n");
             return send_simple_message(OP_CODE, status, message);
         }
     } else {
@@ -990,8 +977,6 @@ int send_end_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_S
 
     *ptr = '\0';
 
-    //fprintf(stderr, "%s", *message);
-
     return 0;
 }
 
@@ -1156,10 +1141,10 @@ int check_ongoing_game(const char PLID[PLID_SIZE + 1]) {
 
     int ret_value;
     if (access(filename, F_OK) == 0) {
-        printf("File does exist: %s\n", filename);
+        //printf("File does exist: %s\n", filename);
         ret_value = 2; // ongoing game
     } else {
-        printf("File does NOT exist: %s\n", filename);
+        //printf("File does NOT exist: %s\n", filename);
         ret_value = 0;
     }
 
@@ -1280,8 +1265,6 @@ int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT
         fprintf(stderr, "Error: Failed to read the game file.\n");
         return 1;
     }
-
-    fprintf(stderr, "last trial number: %d\n", last_trial_number);
 
     if (is_repeated) {
         if (nT == last_trial_number) {

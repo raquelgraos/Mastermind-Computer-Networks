@@ -85,10 +85,7 @@ int udp_connection(char *GSport, int VERBOSE) {
 
                     }
     
-                    //fprintf(stderr, "input n: %ld\n",n);
                     input[n] = '\0';
-
-                    fprintf(stderr, "message received: %s\n", input);
 
                     char *message = NULL;
                     if (parse_input(input, &message, VERBOSE)) {
@@ -97,8 +94,6 @@ int udp_connection(char *GSport, int VERBOSE) {
                         if (message != NULL) free(message);
                         return 1;
                     }
-
-                    fprintf(stderr, "message to send: %s", message);
                     
                     int msg_len = strlen(message);
                     n = sendto(fd, message, msg_len, 0, (struct sockaddr *)&addr, addrlen);
@@ -201,8 +196,6 @@ int tcp_connection(char *GSport, int VERBOSE) {
                         return 1;
                     }
                     input[n] = '\0';
-
-                    fprintf(stderr, "message received: %s\n", input);
                     
                     char *message = NULL;
                     if (parse_input(input, &message, VERBOSE)) {
@@ -211,8 +204,6 @@ int tcp_connection(char *GSport, int VERBOSE) {
                         if (message != NULL) free(message);
                         return 1;
                     }
-
-                    fprintf(stderr, "message to send: %s", message);
                     
                     int msg_len = strlen(message);
                     n = write(newfd, message, msg_len);
