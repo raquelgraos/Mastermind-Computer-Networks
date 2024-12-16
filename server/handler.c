@@ -730,9 +730,9 @@ int scoreboard_s(char **args, char **message, int n_args) {
     status[2] = '\0';
 
     time_t fulltime;
-    char fname[30]; // TODO pensar melhor
-    sprintf(fname, "scoreboard_%ld.txt", time(&fulltime));
-
+    char fname[25]; // TODO pensar melhor
+    sprintf(fname, "sb_%ld.txt", time(&fulltime));
+    fname[24] = '\0';
     char *fdata = NULL;
     size_t fsize = assemble_fdata_sb(&fdata, scores, PLIDs, keys, nTs, modes, res);
     if (fsize == 1)
