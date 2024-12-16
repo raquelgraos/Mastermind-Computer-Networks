@@ -580,7 +580,7 @@ int show_trials_s(char **args, char **message, int n_args) {
     PLID[PLID_SIZE] = '\0';
 
     time_t fulltime;
-    char fname[30]; // TODO pensar melhor
+    char fname[25]; // TODO pensar melhor
     sprintf(fname, "trials_%ld.txt", time(&fulltime));
 
     char *fdata = NULL;
