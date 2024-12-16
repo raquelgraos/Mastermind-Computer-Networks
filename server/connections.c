@@ -113,33 +113,42 @@ int udp_connection(char *GSport, int VERBOSE) {
 
 
 int tcp_connection(char *GSport, int VERBOSE) {
-    int fd,errcode, newfd;
+    int fd, errcode, newfd;
     ssize_t n;
     socklen_t addrlen;
-    struct addrinfo hints,*res;
+    struct addrinfo hints, *res;
     struct sockaddr_in addr;
     char input[TCP_MAX_BUF_SIZE];
     fd_set readfds, testfds;
     struct timeval timeout;
 
-    fd = socket(AF_INET,SOCK_STREAM,0); //TCP socket
+    fd = socket(AF_INET, SOCK_STREAM, 0); // TCP socket
     if (fd == -1) {
         fprintf(stderr, "Error: TCP socket failed.\n");
         return 1;
     }
 
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family=AF_INET; //IPv4
-    hints.ai_socktype=SOCK_STREAM; //TCP socket
-    hints.ai_flags=AI_PASSIVE;
-
-    errcode = getaddrinfo(NULL,GSport,&hints,&res);
-    if (errcode != 0) {
-        fprintf(stderr, "Error: failed to get addrinfo.\n");
+    // Set SO_REUSEADDR
+    int optval = 1;
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
+        fprintf(stderr, "Error: failed to set SO_REUSEADDR.\n");
+        close(fd);
         return 1;
     }
 
-    n=bind(fd,res->ai_addr,res->ai_addrlen);
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;         // IPv4
+    hints.ai_socktype = SOCK_STREAM;  // TCP socket
+    hints.ai_flags = AI_PASSIVE;
+
+    errcode = getaddrinfo(NULL, GSport, &hints, &res);
+    if (errcode != 0) {
+        fprintf(stderr, "Error: failed to get addrinfo.\n");
+        close(fd);
+        return 1;
+    }
+
+    n = bind(fd, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
         fprintf(stderr, "Error: TCP failed to bind.\n");
         freeaddrinfo(res);
@@ -149,7 +158,11 @@ int tcp_connection(char *GSport, int VERBOSE) {
 
     if (res != NULL) freeaddrinfo(res);
 
-    if (listen(fd,5) == -1) /*error*/return 1;
+    if (listen(fd, 5) == -1) {
+        fprintf(stderr, "Error: TCP failed to listen.\n");
+        close(fd);
+        return 1;
+    }
 
     FD_ZERO(&readfds);         // Clear the set
     FD_SET(fd, &readfds);      // Add the socket descriptor to the set
