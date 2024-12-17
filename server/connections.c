@@ -118,6 +118,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
     socklen_t addrlen;
     struct addrinfo hints, *res;
     struct sockaddr_in addr;
+    struct sigaction act;
     char input[TCP_MAX_BUF_SIZE];
     fd_set readfds, testfds;
     struct timeval timeout;
@@ -188,7 +189,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
                 if (FD_ISSET(fd, &testfds)) { // Check if the socket is ready
                     addrlen = sizeof(addr);
                     do newfd = accept(fd, (struct sockaddr*) &addr, &addrlen); // Wait for a connection
-                    while (newfd == -1 && errno=EINTR);
+                    while (newfd == -1 && errno == EINTR);
                     if (newfd == -1) {
                         close(fd);
                         return 1;
