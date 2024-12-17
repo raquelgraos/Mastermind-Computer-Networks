@@ -25,3 +25,4 @@ $(TARGET2): $(OBJS2)
 clean:
 	rm -f $(OBJS) $(TARGET)
 	rm -f $(OBJS2) $(TARGET2)
+	rm -rf server/GAMES server/SCORES client/SAVED
