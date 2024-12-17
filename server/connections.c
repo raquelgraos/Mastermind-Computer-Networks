@@ -113,7 +113,7 @@ int udp_connection(char *GSport, int VERBOSE) {
 
 
 int tcp_connection(char *GSport, int VERBOSE) {
-    int fd, errcode, newfd;
+    int fd, errcode, newfd, ret;
     ssize_t n;
     socklen_t addrlen;
     struct addrinfo hints, *res;
@@ -121,18 +121,16 @@ int tcp_connection(char *GSport, int VERBOSE) {
     char input[TCP_MAX_BUF_SIZE];
     fd_set readfds, testfds;
     struct timeval timeout;
+    pid_t pid;
+    act.sa_handler = SIG_IGN;
+
+    if (sigaction(SIGCHLD, &act, NULL) == -1) {
+        return 1;
+    }
 
     fd = socket(AF_INET, SOCK_STREAM, 0); // TCP socket
     if (fd == -1) {
         fprintf(stderr, "Error: TCP socket failed.\n");
-        return 1;
-    }
-
-    // Set SO_REUSEADDR
-    int optval = 1;
-    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1) {
-        fprintf(stderr, "Error: failed to set SO_REUSEADDR.\n");
-        close(fd);
         return 1;
     }
 
@@ -189,47 +187,46 @@ int tcp_connection(char *GSport, int VERBOSE) {
             default:
                 if (FD_ISSET(fd, &testfds)) { // Check if the socket is ready
                     addrlen = sizeof(addr);
-                    if ((newfd = accept(fd, (struct sockaddr*) &addr, &addrlen)) == -1) {
+                    do newfd = accept(fd, (struct sockaddr*) &addr, &addrlen); // Wait for a connection
+                    while (newfd == -1 && errno=EINTR);
+                    if (newfd == -1) {
                         close(fd);
                         return 1;
                     }
 
-                    if(VERBOSE){
-                        char *ip = inet_ntoa(addr.sin_addr);
-                        int port = ntohs(addr.sin_port);
-                        fprintf(stdout, "Player IP: %s\n", ip);
-                        fprintf(stdout, "Player Port: %d\n", port);
+                    if ((pid = fork()) == -1) {
+                        close(fd);
+                        return 1;
+                    } else if (pid == 0) {
+                        close(fd);
 
-                    }
+                        if (VERBOSE) {
+                            char *ip = inet_ntoa(addr.sin_addr);
+                            int port = ntohs(addr.sin_port);
+                            fprintf(stdout, "Player IP: %s\n", ip);
+                            fprintf(stdout, "Player Port: %d\n", port);
 
-                    n = read(newfd, input, TCP_MAX_BUF_SIZE - 1);
-                    if (n == -1) {
-                        close(newfd);
-                        close(fd);
-                        return 1;
-                    }
-                    input[n] = '\0';
-                    
-                    char *message = NULL;
-                    if (parse_input(input, &message, VERBOSE)) {
-                        fprintf(stdout, "Failed to obtain message to send.\n");
-                        close(fd);
-                        if (message != NULL) free(message);
-                        return 1;
-                    }
-                    
-                    int msg_len = strlen(message);
-                    n = write(newfd, message, msg_len);
-                    int total_bytes_written = n;
-                    if (n == -1) {
-                        fprintf(stdout, "Error: failed to write.\n");
-                        close(newfd);
-                        close(fd);
-                        if (message != NULL) free(message);
-                        return 1;
-                    }
-                    while (total_bytes_written < msg_len) {
+                        }
+
+                        n = read(newfd, input, TCP_MAX_BUF_SIZE - 1);
+                        if (n == -1) {
+                            close(newfd);
+                            close(fd);
+                            return 1;
+                        }
+                        input[n] = '\0';
+                        
+                        char *message = NULL;
+                        if (parse_input(input, &message, VERBOSE)) {
+                            fprintf(stdout, "Failed to obtain message to send.\n");
+                            close(fd);
+                            if (message != NULL) free(message);
+                            return 1;
+                        }
+                        
+                        int msg_len = strlen(message);
                         n = write(newfd, message, msg_len);
+                        int total_bytes_written = n;
                         if (n == -1) {
                             fprintf(stdout, "Error: failed to write.\n");
                             close(newfd);
@@ -237,13 +234,33 @@ int tcp_connection(char *GSport, int VERBOSE) {
                             if (message != NULL) free(message);
                             return 1;
                         }
-                        total_bytes_written += n;
-                    }
+                        while (total_bytes_written < msg_len) {
+                            n = write(newfd, message, msg_len);
+                            if (n == -1) {
+                                fprintf(stdout, "Error: failed to write.\n");
+                                close(newfd);
+                                close(fd);
+                                if (message != NULL) free(message);
+                                return 1;
+                            }
+                            total_bytes_written += n;
+                        }
 
-                    close(newfd);
+                        close(newfd);
+
+                    }
+                    do ret = close(newfd);
+                    while (ret == -1 && errno == EINTR);
+                    if (ret == -1) {
+                        close (fd);
+                        return 1;
+                    }
                 }
+
         }
+    
     }
+
     close(fd);
     return 0;
 }
