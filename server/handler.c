@@ -585,25 +585,26 @@ int show_trials_s(char **args, char **message, int n_args) {
     char *fdata = NULL;
 
     char key[KEY_SIZE + 1];
-    int time_passed;
-    int remaining_time;
-    int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
-    if (res_time == 2) { // exceeded time 
-        if (end_game(time_passed, PLID, key, 'Q', 0)) {
-            return 1; // error
-        }
-    }
 
     if (check_ongoing_game(PLID) == 2) { // active game
-        strcpy(status, "ACT");
+        int time_passed;
+        int remaining_time;
+        int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
+        if (res_time == 2) { // exceeded time 
+            if (end_game(time_passed, PLID, key, 'Q', 0)) {
+                return 1; // error
+            }
+        } else if(res_time == 0){
+            strcpy(status, "ACT");
 
-        char file[strlen(GAMES_DIR) + 1 + PLID_SIZE + 4 + 1];
-        sprintf(file, "%s/GAME_%s.txt", GAMES_DIR, PLID);
+            char file[strlen(GAMES_DIR) + 1 + PLID_SIZE + 4 + 1];
+            sprintf(file, "%s/GAME_%s.txt", GAMES_DIR, PLID);
 
-        size_t fsize = assemble_fdata_st(file, &fdata, 1);
-        if (fsize == 1) return 1;
+            size_t fsize = assemble_fdata_st(file, &fdata, 1);
+            if (fsize == 1) return 1;
 
-        return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
+            return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
+        }
     } 
 
     char file[strlen(GAMES_DIR) + 22];
@@ -1111,12 +1112,6 @@ int get_header_elements(char *key, char *playmode, int fd) {
 }
 
 int open_active_game(char PLID[PLID_SIZE], int *fd) {
-
-    char *path = getcwd(NULL, 0);
-    if (path == NULL) {
-        fprintf(stderr, "Error: getcwd failed.\n");
-        return 1;
-    }
 
     char filename[ONGOING_GAME_SIZE + 1];
     sprintf(filename, "GAME_%s.txt", PLID);
