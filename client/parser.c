@@ -19,7 +19,7 @@ int parse_command(char *command, char *GSIP, char *GSport, char *command_line, c
         else if (res == 2) (*active) = 0; // game ended
 
     } else if (!strcmp(command, "show_trials") || !strcmp(command, "st")) {
-        show_trials_c(GSIP, GSport, PLID);
+        if (!show_trials_c(GSIP, GSport, PLID)) (*active) = 0;
 
     } else if (!strcmp(command, "scoreboard") || !strcmp(command, "sb")) {
         show_sb_c(GSIP, GSport);

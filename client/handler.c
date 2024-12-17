@@ -172,7 +172,7 @@ int try_r(char *GSIP, char *GSport, char *message) {
 }
 
 // MARK: SHOW TRIALS
-void show_trials_c(char *GSIP, char *GSport, char *PLID) {
+int show_trials_c(char *GSIP, char *GSport, char *PLID) {
 
     char OP_CODE[CODE_SIZE] = "STR";
 
@@ -193,16 +193,16 @@ void show_trials_c(char *GSIP, char *GSport, char *PLID) {
 
     *ptr = '\0'; //ensures null termination
 
-    show_trials_r(GSIP, GSport, message);
+    return show_trials_r(GSIP, GSport, message);
 }
 
-void show_trials_r(char *GSIP, char *GSport, char *message) {
+int show_trials_r(char *GSIP, char *GSport, char *message) {
     
     char msg_received[MAX_BUF_SIZE];
 
     if (tcp_conn(GSIP, GSport, message, msg_received)) {
         fprintf(stderr, "Error: Couldn't connect to TCP.\n");
-        return;
+        return 1;
     }
 
     int max_n_args = 5;
@@ -213,10 +213,13 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
     int args_counter = 0;
     while (args[args_counter] != NULL) args_counter++;
 
+    int ret_value = 0;
     if (res == 0) {
         if (args[1] != NULL && !strcmp(args[1], "NOK")) 
             fprintf(stdout, "No games found.\n");
         else if (args[1] != NULL && ((!strcmp(args[1], "ACT")) || (!strcmp(args[1], "FIN")))) {
+            if (!strcmp(args[1], "FIN"))
+                ret_value = 2;
             ssize_t fsize;
             fsize = atoi(args[3]);
 
@@ -225,7 +228,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
                 fprintf(stderr, "Error: getcwd failed.\n");
                 for (int i = 0; args[i] != NULL; i++) free(args[i]);
                 free(args);
-                return;
+                return 1;
             }
 
             int dir = chdir(SAVED_DIR);
@@ -235,7 +238,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
                     for (int i = 0; args[i] != NULL; i++) free(args[i]);
                     free(args);
                     free(path);
-                    return;
+                    return 1;
                 }
                 int dir = chdir(SAVED_DIR);
                 if (dir != 0) {
@@ -243,14 +246,14 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
                     for (int i = 0; args[i] != NULL; i++) free(args[i]);
                     free(args);
                     free(path);
-                    return;
+                    return 1;
                 }
             } else if (dir != 0) {
                 fprintf(stderr, "Error: failed to open directory.\n");
                 for (int i = 0; args[i] != NULL; i++) free(args[i]);
                 free(args);
                 free(path);
-                return;
+                return 1;
             }
             int fd = open(args[2], O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
             if (fd == -1) {
@@ -258,7 +261,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
                 for (int i = 0; args[i] != NULL; i++) free(args[i]);
                 free(args);
                 free(path);
-                return;
+                return 1;
             }
 
             char *ptr = args[4];
@@ -268,7 +271,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
                 for (int i = 0; args[i] != NULL; i++) free(args[i]);
                 free(args);
                 free(path);
-                return;
+                return 1;
             }
 
             ssize_t total_bytes_written = n;
@@ -281,7 +284,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
                     for (int i = 0; args[i] != NULL; i++) free(args[i]);
                     free(args);
                     free(path);
-                    return;
+                    return 1;
                 }
 
                 total_bytes_written += n;
@@ -297,7 +300,7 @@ void show_trials_r(char *GSIP, char *GSport, char *message) {
 
     for (int i = 0; args[i] != NULL; i++) free(args[i]);
     free(args);
-
+    return ret_value;
 }
 
 // MARK: SCOREBOARD
@@ -501,7 +504,6 @@ int quit_r(char *GSIP, char *GSport, char *message) {
         } 
         else if (args[1] != NULL && !strcmp(args[1], "NOK")) {
             fprintf(stderr, "No ongoing game.\n");
-            ret_value = 1;
         } else if (args[1] != NULL && !strcmp(args[1], "ERR")) {
             fprintf(stderr, "Invalid syntax.\n");
             ret_value = 1;

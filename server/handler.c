@@ -192,7 +192,7 @@ int try_s(char **args, char **message, int n_args) {
         int res_try = try_game(PLID, given_key, nT, time_passed, &nW, &nB);
         if (res_try == 0) { //won game
             strcpy(status, "OK");
-            if (end_game(time_passed, PLID, secret_key, 'W', nT)) //falta implementar o scores
+            if (end_game(time_passed, PLID, secret_key, 'W', nT)) 
                 return 1;
             if (send_try_message(OP_CODE, status, message, nT_str, nW, nB)) //TODO
                 return 1;
@@ -308,7 +308,7 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
     else ret_value = 2;
 
     if (!client_retry){
-       char trial_str[40]; //TODO pensar no size disto
+        char trial_str[40]; //TODO pensar no size disto
         sprintf(trial_str, "T: %s %d %d %d\n", given_key, *nB, *nW, time_passed);
 
         if (lseek(fd, 0, SEEK_END) == -1) {
@@ -568,7 +568,6 @@ int show_trials_s(char **args, char **message, int n_args) {
             strcpy(status, "NOK");
             return send_simple_message(OP_CODE, status, message);
         }
-
     } else {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "NOK");
@@ -584,6 +583,17 @@ int show_trials_s(char **args, char **message, int n_args) {
     sprintf(fname, "trials_%ld.txt", time(&fulltime));
 
     char *fdata = NULL;
+
+    char key[KEY_SIZE + 1];
+    int time_passed;
+    int remaining_time;
+    int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
+    if (res_time == 2) { // exceeded time 
+        if (end_game(time_passed, PLID, key, 'Q', 0)) {
+            return 1; // error
+        }
+    }
+
     if (check_ongoing_game(PLID) == 2) { // active game
         strcpy(status, "ACT");
 
@@ -833,14 +843,18 @@ int quit_s(char **args, char **message, int n_args) {
 
     int res = check_ongoing_game(PLID);
     if (res == 2) { // ongoing game
+        char key[KEY_SIZE + 1];
         int time_passed;
         int remaining_time;
         int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
-        /*if (res_time == 2) { // exceeded time 
-            end_game()
-        } */ //TODO se o tempo ja tiver terminado mostramos a solução na mesma ou so encerramos o jogo quietly?
+        if (res_time == 2) { // exceeded time 
+            if (end_game(time_passed, PLID, key, 'Q', 0)) {
+                return 1; // error
+            }
+            strcpy(status, "NOK"); 
+            return send_simple_message(OP_CODE, status, message);
+        }
 
-        char key[KEY_SIZE + 1];
         if (end_game(time_passed, PLID, key, 'Q', 0)) {
             return 1; // error
         }

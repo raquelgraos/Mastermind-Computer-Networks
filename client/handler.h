@@ -22,8 +22,8 @@ int start_r(char *GSIP, char *GSport, char *message);
 int try_c(char *GSIP, char *GSport, char *PLID, char *args[5], int n_trials);
 int try_r(char *GSIP, char *GSport, char *message);
 
-void show_trials_c(char *GSIP, char *GSport, char *PLID);
-void show_trials_r(char *GSIP, char *GSport, char *message);
+int show_trials_c(char *GSIP, char *GSport, char *PLID);
+int show_trials_r(char *GSIP, char *GSport, char *message);
 
 void show_sb_c(char *GSIP, char *GSport);
 void show_sb_r(char *GSIP, char *GSport, char *message);
