@@ -8,6 +8,16 @@ void handle_sigint(int sig) {
     terminate = 1;
 }
 
+/*
+udp_connection: establishes a UDP connection to players, retrieves a message
+and sends a reply.
+
+Returns 0 if successful, 1 otherwise
+
+Arguments:
+ - GSport: port where the GS accepts requests
+ - VERBOSE: flag that indicates if verbose mode is on
+ */
 int udp_connection(char *GSport, int VERBOSE) {
     int fd, errcode;
     ssize_t n;
@@ -53,7 +63,7 @@ int udp_connection(char *GSport, int VERBOSE) {
     while (!terminate) {
         testfds = readfds; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=90; //TODO diminuir isto
+        timeout.tv_sec=90;
 
         // Monitor the socket for incoming data
         int out_fds = select(FD_SETSIZE, &testfds, (fd_set *) NULL, (fd_set *) NULL, (struct timeval *) &timeout);
@@ -61,7 +71,7 @@ int udp_connection(char *GSport, int VERBOSE) {
         switch(out_fds) {
             case 0:
                 printf("\n ---------------Timeout event-----------------\n");
-                break; //what to do ?
+                break;
             case -1:
                 if (terminate) break;
                 fprintf(stderr, "Error: select failed.\n");
@@ -84,10 +94,12 @@ int udp_connection(char *GSport, int VERBOSE) {
                         fprintf(stdout, "Player Port: %d\n", port);
 
                     }
-    
+
+                    // Ensure null termination
                     input[n] = '\0';
 
                     char *message = NULL;
+                    // Parses input and performs operations that populate the reply message
                     if (parse_input(input, &message, VERBOSE)) {
                         fprintf(stdout, "Failed to obtain message to send.\n");
                         close(fd);
@@ -111,7 +123,16 @@ int udp_connection(char *GSport, int VERBOSE) {
     return 0;
 }
 
+/*
+tcp_connection: establishes a TCP connection to players, retrieves a message
+and sends a reply.
 
+Returns 0 if successful, 1 otherwise
+
+Arguments:
+ - GSport: port where the GS accepts requests
+ - VERBOSE: flag that indicates if verbose mode is on
+ */
 int tcp_connection(char *GSport, int VERBOSE) {
     int fd, errcode, newfd, ret;
     ssize_t n;
@@ -171,7 +192,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
     while (!terminate) {
         testfds = readfds; // Reload mask
         memset((void *)&timeout,0,sizeof(timeout));
-        timeout.tv_sec=90; //TODO diminuir isto
+        timeout.tv_sec=90;
 
         // Monitor the socket for incoming data
         int out_fds = select(FD_SETSIZE, &testfds, (fd_set *) NULL, (fd_set *) NULL, (struct timeval *) &timeout);
@@ -179,7 +200,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
         switch(out_fds) {
             case 0:
                 printf("\n ---------------Timeout event-----------------\n");
-                break; //what to do ?
+                break;
             case -1:
                 if (terminate) break;
                 fprintf(stderr, "Error: select failed.\n");
@@ -188,6 +209,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
             default:
                 if (FD_ISSET(fd, &testfds)) { // Check if the socket is ready
                     addrlen = sizeof(addr);
+                    // Parent process may be interrupted by SIG_CHLD signal
                     do newfd = accept(fd, (struct sockaddr*) &addr, &addrlen); // Wait for a connection
                     while (newfd == -1 && errno == EINTR);
                     if (newfd == -1) {
@@ -195,9 +217,12 @@ int tcp_connection(char *GSport, int VERBOSE) {
                         return 1;
                     }
 
+                    // Create a child process for each new connection
                     if ((pid = fork()) == -1) {
                         close(fd);
                         return 1;
+
+                    // Child process
                     } else if (pid == 0) {
                         close(fd);
 
@@ -214,10 +239,12 @@ int tcp_connection(char *GSport, int VERBOSE) {
                             close(newfd);
                             close(fd);
                             return 1;
-                        }
+                        } //TODO
+
                         input[n] = '\0';
                         
                         char *message = NULL;
+                        // Parses input and performs operations that populate the reply message
                         if (parse_input(input, &message, VERBOSE)) {
                             fprintf(stdout, "Failed to obtain message to send.\n");
                             close(fd);
@@ -235,6 +262,8 @@ int tcp_connection(char *GSport, int VERBOSE) {
                             if (message != NULL) free(message);
                             return 1;
                         }
+
+                        // Ensures all bytes are written
                         while (total_bytes_written < msg_len) {
                             n = write(newfd, message, msg_len);
                             if (n == -1) {
@@ -247,13 +276,15 @@ int tcp_connection(char *GSport, int VERBOSE) {
                             total_bytes_written += n;
                         }
 
+                        if (message != NULL) free(message); // ADDED
                         close(newfd);
 
                     }
+                    // Parent process may be interrupted by SIG_CHLD signal
                     do ret = close(newfd);
                     while (ret == -1 && errno == EINTR);
                     if (ret == -1) {
-                        close (fd);
+                        close(fd);
                         return 1;
                     }
                 }

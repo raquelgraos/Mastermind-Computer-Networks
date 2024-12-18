@@ -100,9 +100,7 @@ int tcp_conn(char *GSIP, char *GSport, char *message, char buffer[MAX_BUF_SIZE])
 
     int fd, errcode;
     ssize_t n;
-    socklen_t addrlean;
     struct addrinfo hints, *res;
-    struct sockaddr_in addr;
 
     fd = socket(AF_INET, SOCK_STREAM, 0); // TCP socket
     if (fd == - 1) return 1;

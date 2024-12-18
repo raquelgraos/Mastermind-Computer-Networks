@@ -2,10 +2,24 @@
 #include "gs_main.h"
 
 // MARK: START
+
+/*
+start_s: validates the arguments and performs operations
+related to starting a game.
+
+Returns 0 if the start was successful and 1 otherwise
+
+Arguments:
+ - args: the player message's arguments
+ - message: reply message (to be populated)
+ - n_args: number of arguments
+ - OP_CODE: protocol message code
+*/
 int start_s(char **args, char **message, int n_args, char OP_CODE[CODE_SIZE + 1]) {
+    
     char status[4];
 
-    // validate number of arguments
+    // Validate number of arguments
     if (n_args != 3 && n_args != 7) {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
@@ -46,30 +60,49 @@ int start_s(char **args, char **message, int n_args, char OP_CODE[CODE_SIZE + 1]
 
     // check ongoing game
     int res = check_ongoing_game(PLID);
+    
+    // No ongoing game
     if (res == 0) {
-        // ctart a new game
+        // Start a new game
         if (start_game(PLID, max_time, key) == 0) {
             strcpy(status, "OK");
         } else {
             strcpy(status, "ERR");
         }
+
+    // Ongoing game detected
     } else if (res == 2) {
-        strcpy(status, "NOK"); // ongoing game detected
+        strcpy(status, "NOK");
+
+    // Error in checking ongoing game
     } else {
-        return 1; // error in checking ongoing game
+        return 1;
     }
 
+    // Builds reply message 
     return send_simple_message(OP_CODE, status, message);
 }
 
+/*
+start_game: starts the game internally.
+
+Returns 0 if the start was successful and 1 otherwise
+
+Arguments:
+ - PLID: player ID
+ - max_time: maximum playtime (3 digits)
+ - key: secret 4-color key
+*/
 int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1], char key[KEY_SIZE + 1]) {
+    
+    // Get the current directory
     char *original_path = getcwd(NULL, 0);
     if (original_path == NULL) {
         fprintf(stderr, "Error: getcwd failed.\n");
         return 1;
     }
 
-    // prepare the filename
+    // Prepare the filename
     char filename[ONGOING_GAME_SIZE + 1];
     snprintf(filename, sizeof(filename), "GAME_%s.txt", PLID);
 
@@ -80,7 +113,7 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
         return 1;
     }
 
-    // open or create the game file
+    // Create the game file
     int fd = open(filename, O_CREAT | O_RDWR, 0644);
     if (fd == -1) {
         fprintf(stderr, "Error: failed to open %s file.\n", filename);
@@ -88,7 +121,7 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
         return 1;
     }
 
-    // assemble the game header
+    // Assemble the game header
     char header[HEADER_SIZE + 1];
     if (assemble_header(header, PLID, max_time, key)) {
         close(fd);
@@ -96,7 +129,7 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
         return 1;
     }
 
-    // write the header to the file
+    // Write the header to the file
     ssize_t len = strlen(header);
     if (write(fd, header, len) != len) {
         fprintf(stderr, "Error: write failed.\n");
@@ -118,12 +151,25 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
 }
 
 // MARK: TRY
+
+/*
+try_s: validates the arguments and performs operations
+related to a key trial.
+
+Returns 0 if the trial was successful and 1 otherwise
+
+Arguments:
+ - args: the player message's arguments
+ - message: reply message (to be populated)
+ - n_args: number of arguments
+*/
 int try_s(char **args, char **message, int n_args) {
 
     char status[4];
 
     char OP_CODE[CODE_SIZE + 1] = "RTR";
 
+    // Extracts PLID
     char PLID[PLID_SIZE + 1];
     if (n_args > 1) {
         if (args[1] != NULL) 
@@ -132,25 +178,29 @@ int try_s(char **args, char **message, int n_args) {
             strcpy(status, "ERR");
             return send_simple_message(OP_CODE, status, message);
         }
+    // if no PLID was sent (trial out of context)
     } else {
-        strcpy(status, "NOK"); // no PLID was sent (trial out of context)
+        strcpy(status, "NOK");
         return send_simple_message(OP_CODE, status, message);
     }
 
     PLID[PLID_SIZE] = '\0';
 
+    // Validates the PLID
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
         strcpy(status, "ERR");
         return send_simple_message(OP_CODE, status, message);
     }
 
+    // Validates number of arguments
     if (n_args != 7) {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
         return send_simple_message(OP_CODE, status, message);
     }
-        
+    
+    // Extracts the guessed key
     char given_key[KEY_SIZE + 1];
     for (int i = 2; i < 2 + KEY_SIZE; i++) {
         if (args[i] != NULL) {
@@ -160,6 +210,7 @@ int try_s(char **args, char **message, int n_args) {
 
     given_key[KEY_SIZE] = '\0';
 
+    // Extracts the reported trial number
     char nT_str[2];
     if (args[6] != NULL) strcpy(nT_str, args[6]);
 
@@ -167,60 +218,67 @@ int try_s(char **args, char **message, int n_args) {
 
     int nT = atoi(nT_str);
 
-    if (check_ongoing_game(PLID) == 0) { // no ongoing game to play
+    // No ongoing game
+    if (check_ongoing_game(PLID) == 0) {
         strcpy(status, "NOK");
         return send_simple_message(OP_CODE, status, message);
     }
 
+    // Checks if the game's maximum time has been exceeded
     int time_passed = 0;
     int remaining_time;
     int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
 
     char secret_key[KEY_SIZE + 1];
 
+    // Maximum time has been surpassed -> game ends
     if (res_time == 2) {
         strcpy(status, "ETM");
         if (end_game(time_passed, PLID, secret_key, 'T', 0))
             return 1; // error
-        if (send_end_message(OP_CODE, status, secret_key, message)) // sends secret key
-            return 1; //error
+        // Sends secret key
+        return send_end_message(OP_CODE, status, secret_key, message);
 
-        return 0;
-
+    // There is still game time left
     } else if (res_time == 0) {
         int nW, nB;
+
+        // performs the trial operation
         int res_try = try_game(PLID, given_key, nT, time_passed, &nW, &nB);
-        if (res_try == 0) { //won game
+
+        // Won game
+        if (res_try == 0) {
             strcpy(status, "OK");
             if (end_game(time_passed, PLID, secret_key, 'W', nT)) 
                 return 1;
-            if (send_try_message(OP_CODE, status, message, nT_str, nW, nB)) //TODO
-                return 1;
-            else return 0;
+            return send_try_message(OP_CODE, status, message, nT_str, nW, nB);
 
+        // Error in trial
         } else if (res_try == 1) {
-            return 1; //error
+            return 1;
+        
+        // Successful trial
         } else if (res_try == 2) {
             strcpy(status, "OK");
-            if (send_try_message(OP_CODE, status, message, nT_str, nW, nB)) //TODO
-                return 1;
-            else return 0;
+            return send_try_message(OP_CODE, status, message, nT_str, nW, nB);
 
+        // Duplicate trial
         } else if(res_try == 3) {
             strcpy(status, "DUP");
             return send_simple_message(OP_CODE, status, message);
 
+        // Invalid trial
         } else if (res_try == 4) {
             strcpy(status, "INV");
             return send_simple_message(OP_CODE, status, message);
+        
+        // Player has no remaining tries -> game ends
         } else if (res_try == 5) {
             strcpy(status, "ENT");
             if (end_game(time_passed, PLID, secret_key, 'F', 0))
                 return 1; // error
-            if (send_end_message(OP_CODE, status, secret_key, message)) // sends secret key
-                return 1; //error
-
-            return 0; 
+            // Sends secret key
+            return send_end_message(OP_CODE, status, secret_key, message);
         }
 
     } else if (res_time == 1) return 1; //error
@@ -228,8 +286,29 @@ int try_s(char **args, char **message, int n_args) {
     return 0;
 }
 
+/*
+try_game: performs a trial.
+
+Returns:
+ - 0: Correct guess (game won)
+ - 1: Error
+ - 2: Incorrect guess (but successful trial)
+ - 3: Duplicate guess
+ - 4: Invalid guess
+ - 5: No more trials left
+
+Arguments:
+ - PLID: player ID
+ - given_key: key guessed by player
+ - nT: reported trial number
+ - time_passed: how much game time has passed
+ - nW: number of colors that are in secret key (incorrectly placed) (to be populated)
+ - nB: number of correctly placed colors (to be populated)
+*/
 int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int time_passed, int *nW, int *nB) {
-    // we are restoring the original path only when there is no error
+    //TODO we are restoring the original path only when there is no error
+    
+    // Gets current directory
     char *path = getcwd(NULL, 0);
     int client_retry = 0;
     if (path == NULL) {
@@ -238,18 +317,25 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
     }
 
     int fd;
+
+    // Opens player's current game
     if (open_active_game(PLID, &fd)) { 
         free(path);
         return 1;
     }
 
-
+    // Checks if guess is repeated or invalid
     int res = check_repeated_or_invalid(fd, given_key, nT);
-    if (res == 1) { // error
+    
+    // Error
+    if (res == 1) {
         free(path);
         close(fd);
         return 1;
-    } else if (res==2){
+    
+    // Duplicate guess
+    } else if (res == 2) {
+        // Changes back to original directory
         int dir = chdir(path);
         if (dir != 0) {
             fprintf(stderr, "Error: failed to open original directory.\n");
@@ -259,8 +345,11 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         }
         free(path);
         close(fd);
-        return 3; // Status = "DUP"
-    } else if (res==3){
+        return 3;
+    
+    // Invalid guess
+    } else if (res == 3) {
+        // Changes back to original directory
         int dir = chdir(path);
         if (dir != 0) {
             fprintf(stderr, "Error: failed to open original directory.\n");
@@ -270,21 +359,24 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         }
         free(path);
         close(fd);
-        return 4; // Status = "INV"
-    } else if (res==4){
+        return 4;
+    
+    // TODO
+    } else if (res == 4){
         client_retry = 1; // client might not have gotten the message
     }
-
 
     char secret_key[KEY_SIZE + 1];
     char playmode[2];
 
+    // Gets relevant elements of game file header
     if (get_header_elements(secret_key, playmode, fd)) {
         free(path);
         close(fd);
         return 1;
     }
 
+    // Calculates the correctness of the guessed key
     (*nB) = 0, (*nW) = 0;
     int secret_counts[6] = {0};
     int given_counts[6] = {0};
@@ -302,15 +394,22 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
     }
 
     int ret_value;
-    if ((*nB) == 4) ret_value = 0; // game won
+    
+    // Won game
+    if ((*nB) == 4) ret_value = 0;
+
+    // No more trials left
     else if ((*nB) !=4 && nT == 8)
         ret_value = 5;
+
+    // Successful trial (incorrect guess)
     else ret_value = 2;
 
-    if (!client_retry){
+    if (!client_retry) {
         char trial_str[40]; //TODO pensar no size disto
         sprintf(trial_str, "T: %s %d %d %d\n", given_key, *nB, *nW, time_passed);
 
+        // Goes to the end of the game file
         if (lseek(fd, 0, SEEK_END) == -1) {
             fprintf(stderr, "Error: Failed to seek to the start of the file.\n");
             free(path);
@@ -318,250 +417,50 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
             return 1;
         }
 
+        // Writes trial information
         ssize_t n = write(fd, trial_str, strlen(trial_str));
         if (n == -1) {
             fprintf(stderr, "Error: Failed to write trial in file.\n");
             free(path);
             close(fd);
             return 1;
-        }
+        } //TODO
         
-        close(fd);
+        close(fd); //TODO : e se client_retry = 1 ?
     }
-    int dir = chdir(path);
-        if (dir != 0) {
-            fprintf(stderr, "Error: failed to open original directory.\n");
-            return 1;
-        }
-        free(path); 
 
+    // Changes back to original directory
+    int dir = chdir(path);
+    if (dir != 0) {
+        fprintf(stderr, "Error: failed to open original directory.\n");
+        free(path);
+        return 1;
+    }
+
+    free(path); 
     return ret_value;
 }
 
-int end_game(int time_passed, char PLID[PLID_SIZE + 1], char *key, char mode, int nT) {
-
-    int src;
-    char *path = getcwd(NULL, 0);
-    if (path == NULL) {
-        fprintf(stderr, "Error: getcwd failed.\n");
-        return 1;
-    }
-
-    if (open_active_game(PLID, &src)) {
-        free(path);
-        close(src);
-        return 1;
-    }
-
-    char playmode[2];
-
-    if (get_header_elements(key, playmode, src)) {
-        free(path);
-        close(src);
-        return 1;
-    }
-
-    playmode[1] = '\0';
-
-    if (lseek(src, 0, SEEK_END) == -1) {
-        fprintf(stderr, "Error: Failed to seek to the start of the file.\n");
-        free(path);
-        close(src);
-        return 1;
-    }
-
-    time_t fulltime;
-    struct tm *end_time;
-    char time_str[DATE_SIZE + 1 + TIME_SIZE + 1];
-
-    time(&fulltime);
-    end_time = gmtime(&fulltime);
-    sprintf (time_str, "%4d-%02d-%02d %02d:%02d:%02d %d\n",
-            end_time->tm_year + 1900, end_time->tm_mon + 1, end_time->tm_mday,
-            end_time->tm_hour, end_time->tm_min, end_time->tm_sec, time_passed);
-
-    if (write(src, time_str, strlen(time_str) + 1) == -1) {
-        fprintf(stderr, "Error: Failed to write end of game time.\n");
-        free(path);
-        close(src);
-        return 1;
-    }
-
-    if (lseek(src, 0, SEEK_SET) == -1) {
-        fprintf(stderr, "Error: Failed to seek to the start of the file.\n");
-        free(path);
-        close(src);
-        return 1;
-    }
-
-    char fdata[BUFSIZ]; // TODO tamanho temporario
-    char *ptr_data = fdata;
-    ssize_t n = read(src, ptr_data, BUFSIZ - 1); // leave space for null terminator.
-    if (n == -1) {
-        free(path);
-        close(src);
-        return 1;
-    }
-
-    ssize_t total_bytes_read = n;
-    while (n != 0) {
-        ptr_data += n;
-        n = read(src, ptr_data, BUFSIZ - total_bytes_read - 1); // leave space for null terminator.
-        if (n == -1) {
-            free(path);
-            close(src);
-            return 1;
-        }
-        total_bytes_read += n;
-    }
-
-    fdata[total_bytes_read] = '\0';
-
-    close(src);
-
-    char filename[ONGOING_GAME_SIZE + 1];
-    sprintf(filename, "GAME_%s.txt", PLID);
-    unlink(filename); // remove file
-
-    int dir = chdir(PLID);
-    if (ENOENT == errno) {
-        if (mkdir(PLID, 0700) == -1) {
-            fprintf(stderr, "Error: failed to create %s directory.\n", PLID);
-            free(path);
-            return 1;
-        }
-        dir = chdir(PLID);
-        if (dir != 0) {
-            fprintf(stderr, "Error: failed to enter created %s directory.\n", PLID);
-            free(path);
-            return 1;
-        }
-    }
-
-    char new_file[22]; 
-    sprintf (new_file, "%4d%02d%02d_%02d%02d%02d_%c.txt",
-            end_time->tm_year + 1900, end_time->tm_mon + 1, end_time->tm_mday,
-            end_time->tm_hour, end_time->tm_min, end_time->tm_sec, mode);
-
-    int dest = open(new_file, O_CREAT | O_RDWR, 0644);
-    if (dest == -1) {
-        fprintf(stderr, "Error: failed to open %s file.\n", new_file);
-        free(path);
-        close(dest);
-        return 1;
-    }
-
-    char *ptr2 = fdata;
-    n = write(dest, ptr2, total_bytes_read - 1);
-    if (n == -1) {
-        fprintf(stderr, "Error: write failed.\n");
-        free(path);
-        close(dest);
-        return 1;
-    }
-    ssize_t total_bytes_written = n;
-    while (total_bytes_written < total_bytes_read - 1) {
-        ptr2 += n;
-
-        n = write(dest, ptr2, total_bytes_read - 1 - total_bytes_written);
-        if (n == -1) {
-            fprintf(stderr, "Error: write failed.\n");
-            free(path);
-            close(dest);
-            return 1;
-        }
-
-        total_bytes_written += n;
-    }
-
-    close(dest);
-
-    dir = chdir(path);
-    if (dir != 0) {
-        fprintf(stderr, "Error: failed to open original directory.\n");
-        return 1;
-    }
-    free(path);
-
-    if (mode == 'W'){
-        int score = 999 - time_passed - (nT-1)*(399/8); // max score - time passed - (number of trials-1)*((max score- maxtime)/max number of trials)
-        write_to_scores(score, PLID, key, nT, playmode, end_time);        
-    }
-
-    return 0;
-}
-
-int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], int nT, char playmode[2], struct tm *end_time) {
-
-    char *path = getcwd(NULL, 0);
-    if (path == NULL) {
-        fprintf(stderr, "Error: getcwd failed.\n");
-        return 1;
-    }
-    
-    int dir = chdir(SCORES_DIR);
-    if (dir != 0) {
-        fprintf(stderr, "Error: failed to open original directory.\n");
-        free(path);
-        return 1;
-    }
-
-    char new_file[31]; 
-    sprintf(new_file, "%03d_%6s_%02d%02d%04d_%02d%02d%02d.txt",
-            score, PLID, 
-            end_time->tm_mday, end_time->tm_mon + 1,end_time->tm_year + 1900,
-            end_time->tm_hour, end_time->tm_min, end_time->tm_sec);
-
-    int fd = open(new_file, O_CREAT | O_RDWR, 0644);
-    if (fd == -1) {
-        fprintf(stderr, "Error: failed to open %s file.\n", new_file);
-        free(path);
-        close(fd);
-        return 1;
-    }
-
-    char line[21];
-    char *ptr = line;
-    sprintf(line, "%03d %6s %4s %1d %1s\n", score, PLID, key, nT, playmode);
-
-    ssize_t n = write(fd, ptr, 20);
-    if (n == -1) {
-        fprintf(stderr, "Error: write failed.\n");
-        free(path);
-        close(fd);
-        return 1;
-    }
-    while (n < 20) {
-        ptr += n;
-        n = write(fd, ptr, 20 - n);
-        if (n == -1) {
-            fprintf(stderr, "Error: write failed.\n");
-            free(path);
-            close(fd);
-            return 1;
-        }
-    }
-
-    close (fd);
-
-    dir = chdir(path);
-    if (dir != 0) {
-        fprintf(stderr, "Error: failed to open original directory.\n");
-        free(path);
-        return 1;
-    }
-
-    free(path);
-    return 0;
-}
-
 // MARK: SHOW_TRIALS
+
+/*
+show_trials_s: validates the arguments and performs operations
+related to showing previous trials.
+
+Returns 0 if the show trials was successful and 1 otherwise
+
+Arguments:
+ - args: the player message's arguments
+ - message: reply message (to be populated)
+ - n_args: number of arguments
+*/
 int show_trials_s(char **args, char **message, int n_args) {
 
     char OP_CODE[CODE_SIZE + 1] = "RST";
 
     char status[4];
 
+    // Validates arguments
     if (n_args == 2) {
         if (args[1] == NULL || !is_valid_PLID(args[1])) {
             fprintf(stderr, "Error: invalid PLID.\n");
@@ -574,46 +473,59 @@ int show_trials_s(char **args, char **message, int n_args) {
         return send_simple_message(OP_CODE, status, message);
     }
 
+    // Extracts PLID
     char PLID[PLID_SIZE + 1];
     strncpy(PLID, args[1], PLID_SIZE);
     PLID[PLID_SIZE] = '\0';
 
+    // Prepares filename
     time_t fulltime;
-    char fname[25]; // TODO pensar melhor
+    char fname[25];
     sprintf(fname, "trials_%ld.txt", time(&fulltime));
 
     char *fdata = NULL;
 
     char key[KEY_SIZE + 1];
 
-    if (check_ongoing_game(PLID) == 2) { // active game
+    // If player has an active game
+    if (check_ongoing_game(PLID) == 2) {
+
+        // Checks if game's max time has been exceeded
         int time_passed;
         int remaining_time;
         int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
-        if (res_time == 2) { // exceeded time 
-            if (end_game(time_passed, PLID, key, 'Q', 0)) {
+
+        // Exceeded time -> ends game
+        if (res_time == 2) {
+            if (end_game(time_passed, PLID, key, 'T', 0)) { // WARNING: changed mode from Q to T
                 return 1; // error
             }
+        
+        // Game still has time left
         } else if(res_time == 0){
             strcpy(status, "ACT");
 
-            char file[strlen(GAMES_DIR) + 1 + PLID_SIZE + 4 + 1];
+            char file[strlen(GAMES_DIR) + 1 + 4 + 1 + PLID_SIZE + 4 + 1]; // WARNING: changed from this "strlen(GAMES_DIR) + 1 + PLID_SIZE + 4 + 1"
             sprintf(file, "%s/GAME_%s.txt", GAMES_DIR, PLID);
 
+            // Assembles the previous trials (populates fdata)
             size_t fsize = assemble_fdata_st(file, &fdata, 1);
-            if (fsize == 1) return 1;
+            if (fsize == 1) return 1; // error
 
             return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
         }
     } 
 
+    // Finds player's last game
     char file[strlen(GAMES_DIR) + 22];
     int res = find_last_game(PLID, file);
 
+    // Player has no games
     if (res == 0) {
         strcpy(status, "NOK");
         return send_simple_message(OP_CODE, status, message);
 
+    // Shows trials of player's last game
     } else {
         strcpy(status, "FIN");
         size_t fsize = assemble_fdata_st(file, &fdata, 0);
@@ -623,6 +535,16 @@ int show_trials_s(char **args, char **message, int n_args) {
     }
 }
 
+/*
+assembles_fdata_st: assembles previous trials.
+
+Returns fsize if the assemble was successful and 1 otherwise
+
+Arguments:
+ - file: game filename
+ - fdata: previous trials (to be populated)
+ - act:flag that indicates if player has active game
+*/
 int assemble_fdata_st(char *file, char **fdata, int act) {
 
     char keys[8][5];
@@ -633,6 +555,7 @@ int assemble_fdata_st(char *file, char **fdata, int act) {
 
     int remaining_time;
     if (act) {
+        // Gets PLID
         char PLID[PLID_SIZE + 1];
         char file_cpy[strlen(file)];
         strcpy(file_cpy, file);
@@ -641,18 +564,21 @@ int assemble_fdata_st(char *file, char **fdata, int act) {
             return 1;
         }
 
+        // Gets how much game time has passed
         int time_passed;
-        if (check_if_in_time(PLID, &time_passed, &remaining_time) == 1) {
+        if (check_if_in_time(PLID, &time_passed, &remaining_time)) {
             return 1;
         }
     }
 
+    // Opens game's file
     FILE *fd = fopen(file, "r");
     if (fd == NULL) {
         fprintf(stderr, "Error: Failed to open %s file.\n", file);
         return 1;
     }
 
+    // Gets all trial lines and counts them
     char line[LINE_SIZE_ST + 3];
     while (fgets(line, LINE_SIZE_ST + 2, fd)) {
         if (!strncmp(line, "T:", 2)) {
@@ -672,6 +598,7 @@ int assemble_fdata_st(char *file, char **fdata, int act) {
         return 1;    
     }
 
+    // populates fdata with previous trial's information and counts the data size
     char *ptr = *fdata;
 
     size_t fsize = 0;
@@ -681,6 +608,7 @@ int assemble_fdata_st(char *file, char **fdata, int act) {
         fsize += written;
     }
 
+    // if trials are of an active game, also writes to fdata how much game time there is left
     if (act) {
         int written = sprintf(ptr, "%d\n", remaining_time);
         ptr += written;
@@ -690,6 +618,15 @@ int assemble_fdata_st(char *file, char **fdata, int act) {
     return fsize;
 }
 
+/*
+find_last_game: if player has no active games, finds their last game
+
+Returns 0 if no games were found or the found game number
+
+Arguments:
+ - PLID: player ID
+ - fname: filename (to be populated)
+*/
 int find_last_game(char PLID[PLID_SIZE + 1], char *fname) {
     
     struct dirent **filelist;
@@ -707,7 +644,6 @@ int find_last_game(char PLID[PLID_SIZE + 1], char *fname) {
         while (n_entries--) {
             if (filelist[n_entries]->d_name[0] != '.' && !found) {
                 sprintf(fname, "%s/%s", dirname, filelist[n_entries]->d_name);
-                //printf(fname);
                 found = 1;
             }
             free(filelist[n_entries]);
@@ -718,7 +654,19 @@ int find_last_game(char PLID[PLID_SIZE + 1], char *fname) {
 }
 
 // MARK: SCOREBOARD
-int scoreboard_s(char **args, char **message, int n_args) {
+
+/*
+scoreboard_s: validates the arguments and performs operations
+related to showing scoreboard.
+
+Returns 0 if the show scoreboard was successful and 1 otherwise
+
+Arguments:
+ - args: the player message's arguments
+ - message: reply message (to be populated)
+ - n_args: number of arguments
+*/
+int scoreboard_s(char **message) {
     
     char OP_CODE[CODE_SIZE + 1] = "RSS";
 
@@ -730,7 +678,10 @@ int scoreboard_s(char **args, char **message, int n_args) {
     int nTs[10];
     char modes[10][2];
     
+    // Finds top 10 scores
     int res = find_top_scores(scores, PLIDs, keys, nTs, modes);
+
+    // No games were founds
     if (res == 0) {
         strcpy(status, "EMPTY");
         status[5] = '\0';
@@ -740,18 +691,35 @@ int scoreboard_s(char **args, char **message, int n_args) {
     strcpy(status, "OK");
     status[2] = '\0';
 
+    // Prepares filename
     time_t fulltime;
-    char fname[25]; // TODO pensar melhor
+    char fname[25];
     sprintf(fname, "sb_%ld.txt", time(&fulltime));
     fname[24] = '\0';
+
+    // Assembles the scoreboard
     char *fdata = NULL;
     size_t fsize = assemble_fdata_sb(&fdata, scores, PLIDs, keys, nTs, modes, res);
     if (fsize == 1)
-        return 1;
+        return 1; // error
 
     return send_data_message(OP_CODE, status, fname, fsize, fdata, message);
 }
 
+/*
+assembles_fdata_sb: assembles scoreboard.
+
+Returns fsize if the assemble was successful and 1 otherwise
+
+Arguments:
+ - fdata: scoreboard (to be populated)
+ - scores: top 10 scores
+ - PLIDs: player IDs with top 10 scores
+ - keys: keys of top 10 games
+ - nTs: number of trials of top 10 games
+ - modes: play modes of top 10 games
+ - res: games found (max 10)
+*/
 int assemble_fdata_sb(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res) {
 
     *fdata = (char*) malloc((LINE_SIZE_SB + 1) * res);
@@ -809,12 +777,24 @@ int find_top_scores(int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10]
 }
 
 // MARK: QUIT
+
+/*
+quit_s: quits the game internally
+
+Returns 0 if quit was successful and 1 otherwise
+
+Arguments:
+ - args: the player message's arguments
+ - message: reply message (to be populated)
+ - n_args: number of arguments
+*/
 int quit_s(char **args, char **message, int n_args) {
     
     char status[4];
 
     char OP_CODE[CODE_SIZE + 1] = "RQT";
 
+    // Extracts PLID
     char PLID[PLID_SIZE + 1];
     if (n_args > 1) {
         if (args[1] != NULL) 
@@ -823,19 +803,23 @@ int quit_s(char **args, char **message, int n_args) {
             strcpy(status, "ERR");
             return send_simple_message(OP_CODE, status, message);
         }
+
+    // no PLID was sent (trial out of context)
     } else {
-        strcpy(status, "NOK"); // no PLID was sent (trial out of context)
+        strcpy(status, "NOK");
         return send_simple_message(OP_CODE, status, message);
     }
 
     PLID[PLID_SIZE] = '\0';
 
+    // Validates PLID
     if (!is_valid_PLID(PLID)) {
         fprintf(stderr, "Error: invalid PLID.\n");
         strcpy(status, "ERR");
         return send_simple_message(OP_CODE, status, message);
     }
 
+    // Validates number of arguments
     if (n_args != 2) {
         fprintf(stderr, "Error: invalid number of args.\n");
         strcpy(status, "ERR");
@@ -843,33 +827,35 @@ int quit_s(char **args, char **message, int n_args) {
     }
 
     int res = check_ongoing_game(PLID);
-    if (res == 2) { // ongoing game
+
+    // Ongoing game
+    if (res == 2) {
         char key[KEY_SIZE + 1];
         int time_passed;
         int remaining_time;
         int res_time = check_if_in_time(PLID, &time_passed, &remaining_time);
-        if (res_time == 2) { // exceeded time 
-            if (end_game(time_passed, PLID, key, 'Q', 0)) {
+
+        // Game has exceeded maximum playtime
+        if (res_time == 2) { 
+            if (end_game(time_passed, PLID, key, 'T', 0)) { //WARNING: changed mode from "Q" to "T"
                 return 1; // error
             }
             strcpy(status, "NOK"); 
             return send_simple_message(OP_CODE, status, message);
         }
 
+        // Game in time -> ends game anyway
         if (end_game(time_passed, PLID, key, 'Q', 0)) {
             return 1; // error
         }
 
         strcpy(status, "OK");
                           
-        if (send_end_message(OP_CODE, status, key, message)) {
-            return 1;
-        } else {
-            return 0;
-        }
+        return send_end_message(OP_CODE, status, key, message);
 
+    // No ongoing game
     } else if (res == 0) {
-        strcpy(status, "NOK"); // no ongoing game
+        strcpy(status, "NOK");
         return send_simple_message(OP_CODE, status, message);
 
     } else if (res == 1) return 1; //error
@@ -877,8 +863,291 @@ int quit_s(char **args, char **message, int n_args) {
     return 0;
 }
 
+// MARK: End Game
+
+/*
+end_game: ends game internally
+
+Returns 0 if successul and 1 otherwise
+
+Arguments:
+ - time_passed: total game time
+ - PLID: player ID
+ - key: secret key (to be populated)
+ - mode: end mode - [Q]uit; [W]in; [F]ail; [T]imeout
+ - nT: number of trials
+*/
+int end_game(int time_passed, char PLID[PLID_SIZE + 1], char *key, char mode, int nT) {
+
+    int src;
+
+    // Gets current directory
+    char *path = getcwd(NULL, 0);
+    if (path == NULL) {
+        fprintf(stderr, "Error: getcwd failed.\n");
+        return 1;
+    }
+
+    // Gets player's current game file
+    if (open_active_game(PLID, &src)) {
+        free(path);
+        close(src);
+        return 1;
+    }
+
+    char playmode[2];
+
+    // Gets relevant elements from game file header
+    if (get_header_elements(key, playmode, src)) {
+        free(path);
+        close(src);
+        return 1;
+    }
+
+    playmode[1] = '\0';
+
+    if (lseek(src, 0, SEEK_END) == -1) {
+        fprintf(stderr, "Error: Failed to seek to the start of the file.\n");
+        free(path);
+        close(src);
+        return 1;
+    }
+
+    // Gets and formats game's end time
+    time_t fulltime;
+    struct tm *end_time;
+    char time_str[DATE_SIZE + 1 + TIME_SIZE + 1];
+
+    time(&fulltime);
+    end_time = gmtime(&fulltime);
+    sprintf (time_str, "%4d-%02d-%02d %02d:%02d:%02d %d\n",
+            end_time->tm_year + 1900, end_time->tm_mon + 1, end_time->tm_mday,
+            end_time->tm_hour, end_time->tm_min, end_time->tm_sec, time_passed);
+
+    if (write(src, time_str, strlen(time_str) + 1) == -1) {
+        fprintf(stderr, "Error: Failed to write end of game time.\n");
+        free(path);
+        close(src);
+        return 1;
+    }
+
+    // Rewinds game file to the beginning
+    if (lseek(src, 0, SEEK_SET) == -1) {
+        fprintf(stderr, "Error: Failed to seek to the start of the file.\n");
+        free(path);
+        close(src);
+        return 1;
+    }
+
+    char fdata[BUFSIZ]; // TODO tamanho temporario
+
+    // Reads game file and saves the data in fdata
+    char *ptr_data = fdata;
+    ssize_t n = read(src, ptr_data, BUFSIZ - 1); // leave space for null terminator
+    if (n == -1) {
+        free(path);
+        close(src);
+        return 1;
+    }
+
+    // Ensures all bytes are read
+    ssize_t total_bytes_read = n;
+    while (n != 0) {
+        ptr_data += n;
+        n = read(src, ptr_data, BUFSIZ - total_bytes_read - 1); // leave space for null terminator
+        if (n == -1) {
+            free(path);
+            close(src);
+            return 1;
+        }
+        total_bytes_read += n;
+    }
+
+    fdata[total_bytes_read] = '\0';
+
+    close(src);
+
+    // Gets active game filename
+    char filename[ONGOING_GAME_SIZE + 1];
+    sprintf(filename, "GAME_%s.txt", PLID);
+    unlink(filename); // removes active game
+
+    // Opens player's (finished) games directory
+    int dir = chdir(PLID);
+    // Creates it if necessary
+    if (ENOENT == errno) {
+        if (mkdir(PLID, 0700) == -1) {
+            fprintf(stderr, "Error: failed to create %s directory.\n", PLID);
+            free(path);
+            return 1;
+        }
+        dir = chdir(PLID);
+        if (dir != 0) {
+            fprintf(stderr, "Error: failed to enter created %s directory.\n", PLID);
+            free(path);
+            return 1;
+        }
+    }
+
+    // Prepares finished game filename
+    char new_file[22]; 
+    sprintf (new_file, "%4d%02d%02d_%02d%02d%02d_%c.txt",
+            end_time->tm_year + 1900, end_time->tm_mon + 1, end_time->tm_mday,
+            end_time->tm_hour, end_time->tm_min, end_time->tm_sec, mode);
+
+    // Creates finished game file
+    int dest = open(new_file, O_CREAT | O_RDWR, 0644);
+    if (dest == -1) {
+        fprintf(stderr, "Error: failed to open %s file.\n", new_file);
+        free(path);
+        close(dest);
+        return 1;
+    }
+
+    // Writes fdata to the new finished game file
+    char *ptr2 = fdata;
+    n = write(dest, ptr2, total_bytes_read - 1);
+    if (n == -1) {
+        fprintf(stderr, "Error: write failed.\n");
+        free(path);
+        close(dest);
+        return 1;
+    }
+
+    // Ensures all bytes are written
+    ssize_t total_bytes_written = n;
+    while (total_bytes_written < total_bytes_read - 1) {
+        ptr2 += n;
+
+        n = write(dest, ptr2, total_bytes_read - 1 - total_bytes_written);
+        if (n == -1) {
+            fprintf(stderr, "Error: write failed.\n");
+            free(path);
+            close(dest);
+            return 1;
+        }
+
+        total_bytes_written += n;
+    }
+
+    close(dest);
+
+    // Goes back to original directory
+    dir = chdir(path);
+    if (dir != 0) {
+        fprintf(stderr, "Error: failed to open original directory.\n");
+        return 1;
+    }
+
+    free(path);
+
+    // If game was won, calculates its score and writes to SCORES directory
+    if (mode == 'W'){
+        int score = 999 - time_passed - (nT-1)*(399/8); // max score - time passed - (number of trials-1)*((max score- maxtime)/max number of trials)
+        return write_to_scores(score, PLID, key, nT, playmode, end_time);        
+    }
+
+    return 0;
+}
+
+/*
+write_to_scores: writes game info to SCORES directory
+
+Returns 0 if successul and 1 otherwise
+
+Arguments:
+ - score: game score
+ - PLID: player ID
+ - key: secret key
+ - nT: number of trials
+ - playmode: game's playmode - [S]tart; [D]ebug
+ - end_time: game's end time
+*/
+int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], int nT, char playmode[2], struct tm *end_time) {
+
+    // Gets current directory
+    char *path = getcwd(NULL, 0);
+    if (path == NULL) {
+        fprintf(stderr, "Error: getcwd failed.\n");
+        return 1;
+    }
+    
+    // Opens SCORES directory
+    int dir = chdir(SCORES_DIR);
+    if (dir != 0) {
+        fprintf(stderr, "Error: failed to open original directory.\n");
+        free(path);
+        return 1;
+    }
+
+    // Prepares won game filename
+    char new_file[31]; 
+    sprintf(new_file, "%03d_%6s_%02d%02d%04d_%02d%02d%02d.txt",
+            score, PLID, 
+            end_time->tm_mday, end_time->tm_mon + 1,end_time->tm_year + 1900,
+            end_time->tm_hour, end_time->tm_min, end_time->tm_sec);
+
+    // Opens won game file
+    int fd = open(new_file, O_CREAT | O_RDWR, 0644);
+    if (fd == -1) {
+        fprintf(stderr, "Error: failed to open %s file.\n", new_file);
+        free(path);
+        close(fd);
+        return 1;
+    }
+
+    // Writes to won game file relevant information about game
+    char line[21];
+    char *ptr = line;
+    sprintf(line, "%03d %6s %4s %1d %1s\n", score, PLID, key, nT, playmode);
+
+    ssize_t n = write(fd, ptr, 20);
+    if (n == -1) {
+        fprintf(stderr, "Error: write failed.\n");
+        free(path);
+        close(fd);
+        return 1;
+    }
+
+    // Ensures all bytes are written
+    while (n < 20) {
+        ptr += n;
+        n = write(fd, ptr, 20 - n);
+        if (n == -1) {
+            fprintf(stderr, "Error: write failed.\n");
+            free(path);
+            close(fd);
+            return 1;
+        }
+    }
+
+    close (fd);
+
+    // Goes back to original directory
+    dir = chdir(path);
+    if (dir != 0) {
+        fprintf(stderr, "Error: failed to open original directory.\n");
+        free(path);
+        return 1;
+    }
+
+    free(path);
+    return 0;
+}
+
 // MARK: MESSAGES
 
+/*
+send_simple_message: populates message that is composed
+of only OP_CODE and status
+
+Returns 0 if successful and 1 otherwise
+
+Arguments:
+ - OP_CODE: protocol message code
+ - status: status of the operation
+ - messsage: reply message (to be populated)
+*/
 int send_simple_message(char OP_CODE[CODE_SIZE + 1], char *status, char **message) {
 
     int status_len = strlen(status);
@@ -906,6 +1175,20 @@ int send_simple_message(char OP_CODE[CODE_SIZE + 1], char *status, char **messag
     return 0;
 }
 
+/*
+send_try_message: populates message that is composed
+of OP_CODE, status, trial number, nW and nB
+
+Returns 0 if successful and 1 otherwise
+
+Arguments:
+ - OP_CODE: protocol message code
+ - status: status of the operation
+ - messsage: reply message (to be populated)
+ - nT_str: number of trials
+ - nW: number of colors that are in secret key (incorrectly placed) (to be populated)
+ - nB: number of correctly placed colors (to be populated)
+*/
 int send_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **message, char nT_str[2], int nW, int nB) {
 
     int status_len = strlen(status);
@@ -955,6 +1238,18 @@ int send_try_message(char OP_CODE[CODE_SIZE + 1], char status[4], char **message
     return 0;
 }
 
+/*
+send_end_message: populates message that is composed
+of OP_CODE, status and secret key
+
+Returns 0 if successful and 1 otherwise
+
+Arguments:
+ - OP_CODE: protocol message code
+ - status: status of the operation
+ - messsage: reply message (to be populated)
+ - key: secret key
+*/
 int send_end_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_SIZE + 1], char **message) {
 
     int status_len = strlen(status);
@@ -995,6 +1290,20 @@ int send_end_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_S
     return 0;
 }
 
+/*
+send_data_message: populates message that is composed
+of OP_CODE, status, filename, file size and file data.
+
+Returns 0 if successful and 1 otherwise
+
+Arguments:
+ - OP_CODE: protocol message code
+ - status: status of the operation
+ - fname: filename
+ - fsize: file size
+ - fdata: file data
+ - messsage: reply message (to be populated)
+*/
 int send_data_message(char OP_CODE[CODE_SIZE + 1], char status[6], char fname[30], size_t fsize, char *fdata, char **message) {
 
     int status_len = strlen(status);
@@ -1043,6 +1352,7 @@ int send_data_message(char OP_CODE[CODE_SIZE + 1], char status[6], char fname[30
 
     *ptr = '\0';
 
+    // frees allocated memory for fdata
     free(fdata);
 
     return 0;
@@ -1074,9 +1384,20 @@ bool is_valid_max_time(const char max_time_str[TIME_SIZE + 1], int len_max_time)
     else return true;
 }
 
+/*
+get_header_elements: retrieves the secret key and 
+playmode from the game file
+
+Returns 0 if successful and 1 otherwise
+
+Arguments:
+ - key: secret key (to be populated)
+ - playmode: game's playmode (to be populated)
+ - fd: game file descriptor
+*/
 int get_header_elements(char *key, char *playmode, int fd) {
 
-    // ensure the file pointer is at the beginning
+    // Ensure the file pointer is at the beginning
     if (lseek(fd, 0, SEEK_SET) == -1) {
         fprintf(stderr, "Error: Failed to rewind the game file.\n");
         return 1;
@@ -1084,16 +1405,17 @@ int get_header_elements(char *key, char *playmode, int fd) {
 
     char header[HEADER_SIZE + 1];
     char *ptr = header;
-    int n = read(fd, ptr, HEADER_SIZE); // leave space for null terminator.
+    int n = read(fd, ptr, HEADER_SIZE); // leave space for null terminator
     if (n == -1) {
         fprintf(stderr, "Error: failed to read file.\n");
         return 1;
     }
 
+    // Ensure all bytes are read
     ssize_t total_bytes_read = n;
     while (n != 0) {
         ptr += n;
-        n = read(fd, ptr, HEADER_SIZE - total_bytes_read); // leave space for null terminator.
+        n = read(fd, ptr, HEADER_SIZE - total_bytes_read); // leave space for null terminator
         if (n == -1) {
             fprintf(stderr, "Error: failed to read file.\n");
             return 1;
@@ -1111,17 +1433,30 @@ int get_header_elements(char *key, char *playmode, int fd) {
     return 0;
 }
 
+/*
+open_active_game: opens the player's current game
+
+Returns 0 if game file was successfully opened and
+1 otherwise
+
+Arguments:
+ - PLID: player ID
+ - fd: file descriptor (to be populated)
+*/
 int open_active_game(char PLID[PLID_SIZE], int *fd) {
 
+    // Prepares the filename
     char filename[ONGOING_GAME_SIZE + 1];
     sprintf(filename, "GAME_%s.txt", PLID);
 
+    // Opens GAMES directory
     int dir = chdir(GAMES_DIR);
     if (dir != 0) {
         fprintf(stderr, "Error: failed to open GAMES directory.\n");
         return 1;
     }
 
+    // Opens current game file
     *fd = open(filename, O_RDWR);
     if (*fd == -1) {
         fprintf(stderr, "Error: failed to open %s file.\n", filename);
@@ -1130,14 +1465,26 @@ int open_active_game(char PLID[PLID_SIZE], int *fd) {
     return 0; 
 }
 
+/*
+check_ongoing_game: checks if a given player has an
+active game
+
+Returns 0 if there is no active game, 2 if there is
+and 1 otherwise
+
+Argument:
+ - PLID: player ID
+*/
 int check_ongoing_game(const char PLID[PLID_SIZE + 1]) {
 
+    // Gets current directory
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
         fprintf(stderr, "Error: getcwd failed.\n");
         return 1;
     }
 
+    // Opens GAMES directory
     int dir = chdir(GAMES_DIR);
     if (dir != 0) {
         fprintf(stderr, "Error: failed to open GAMES directory.\n");
@@ -1149,49 +1496,70 @@ int check_ongoing_game(const char PLID[PLID_SIZE + 1]) {
     sprintf(filename, "GAME_%s.txt", PLID);
 
     int ret_value;
+
+    // Ongoing game
     if (access(filename, F_OK) == 0) {
-        //printf("File does exist: %s\n", filename);
-        ret_value = 2; // ongoing game
+        ret_value = 2;
+    
     } else {
-        //printf("File does NOT exist: %s\n", filename);
         ret_value = 0;
     }
 
+    // Changes back to original directory
     dir = chdir(path);
     if (dir != 0) {
         fprintf(stderr, "Error: failed to open og directory.\n");
         free(path);
         return 1;
-    }    
+    }
+
     free(path);
     return ret_value;
 }
 
+/*
+check_if_in_time: checks if game time has not surpassed
+maximum playtime
+
+Returns 0 if game is in time, 2 if maximum playtime has
+been exceeded and 1 otherwise
+
+Arguments:
+ - PLID: player ID
+ - time_passed: how much game time has passed (to be populated)
+ - remaining_time: how much game time there is left (to be populated)
+*/
 int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_time) {
     
     int fd;
+
+    // Gets current directory
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
         fprintf(stderr, "Error: getcwd failed.\n");
         return 1;
     }
 
+    // Opens player's current game
     if (open_active_game(PLID, &fd)) 
         return 1;
     
+    // From the game file header, gets the start time
     char header[HEADER_SIZE + 1];
     char *ptr = header;
-    int n = read(fd, ptr, HEADER_SIZE - 1); // leave space for null terminator.
+    int n = read(fd, ptr, HEADER_SIZE - 1); // leave space for null terminator
     if (n == -1) {
         fprintf(stderr, "Error: failed to read file.\n");
         free(path);
         close(fd);
         return 1;
     }
+
+    // Ensures all bytes are read
     ssize_t total_bytes_read = n;
     while (n != 0) {
         ptr += n;
-        n = read(fd, ptr, HEADER_SIZE - total_bytes_read - 1); // leave space for null terminator.
+        n = read(fd, ptr, HEADER_SIZE - total_bytes_read - 1); // leave space for null terminator
         if (n == -1) {
             fprintf(stderr, "Error: failed to read file.\n");
             free(path);
@@ -1219,54 +1587,78 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_
     int max_time = atoi(max_time_str);
     long int fulltime = strtol(fulltime_str, NULL, 10);
 
+    // Gets current time
     time_t current_time;
     time(&current_time);
 
     int res = 0;
 
+    // Calculates how much time has passed and how much time there is left
     *time_passed = current_time - fulltime;
     *remaining_time = max_time - *time_passed;
+
+    // Maximum playtime exceeded
     if (*remaining_time <= 0)
-        res = 2; // max_time exceeded
+        res = 2;
 
     close(fd);
 
+    // Goes back to original directory
     int dir = chdir(path);
     if (dir != 0) {
         fprintf(stderr, "Error: failed to open og directory.\n");
         free(path);
         return 1;
-    }    
+    }
+
     free(path);
     return res;
 }
 
+/*
+check_repeated_or_invalid: checks if trial is repeated or invalid
+
+Returns:
+ - 0: Valid trial
+ - 1: Error
+ - 2: Repeated guess that wasn't the last one
+ - 3: Invalid trial
+ - 4: Repeated last guess
+
+Arguments:
+ - fd: game file descriptor
+ - give_key: guessed key
+ - nT: reported trial number
+*/
 int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT) {
     char buffer[128];
     char previous_key[KEY_SIZE + 1] = {0};
     int last_trial_number = 0;
     int is_repeated = 0; 
 
-    // rewind the file descriptor to the beginning
+    // Rewind the file descriptor to the beginning
     if (lseek(fd, 0, SEEK_SET) == -1) {
         fprintf(stderr, "Error: Failed to rewind the game file.\n");
         return 1;
     }
 
+    // Ensure all bytes are read
     ssize_t bytes_read;
     while ((bytes_read = read(fd, buffer, sizeof(buffer) - 1)) > 0) {
         buffer[bytes_read] = '\0';
+
         char *line = strtok(buffer, "\n");
         while (line != NULL) {
+            // Checks previous trials
             if (strncmp(line, "T:", 2) == 0) { 
                 sscanf(line, "T: %4s", previous_key);
                 last_trial_number++;
-                // check for repeated guess
+                // Check for repeated guess
                 if (strcmp(previous_key, given_key) == 0) {
                     is_repeated = 1;
                 }
             }
-            line = strtok(NULL, "\n"); // move to the next line
+            line = strtok(NULL, "\n"); // Move to the next line
         }
     }
 
@@ -1276,17 +1668,18 @@ int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT
     }
 
     if (is_repeated) {
-        if (nT == last_trial_number) {
-            return 4; // repeated last guess
+        if (nT == last_trial_number) { // TODO check relevance
+            return 4;
         }
-        return 2; // repeated guess that wasn't the last one
+        return 2;
     }
 
+    // Checks conditions for an invalid trial
     if (nT != last_trial_number + 1 && !(is_repeated && nT == last_trial_number)) {
-        return 3; // invalid trial
+        return 3;
     }
 
-    return 0; // valid trial
+    return 0;
 }
 
 void generate_random_key(char *key) {
@@ -1299,6 +1692,18 @@ void generate_random_key(char *key) {
     key[KEY_SIZE] = '\0';
 }
 
+/*
+assemble_header: assembles game file header
+with relevant information
+
+Returns 0 if successful and 1 otherwise
+
+Arguments:
+ - header: game file header (to be populated)
+ - PLID: player ID
+ - max_time: maximum playtime (3 digits)
+ - key: secret key
+*/
 int assemble_header(char *header, const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1], char key[KEY_SIZE + 1]) {
 
     char mode[2];
@@ -1321,7 +1726,7 @@ int assemble_header(char *header, const char PLID[PLID_SIZE + 1], const char max
             current_time->tm_hour, current_time->tm_min, current_time->tm_sec);
 
     char fulltime_str[FULLTIME_STR_SIZE];
-    int fulltime_len = snprintf(fulltime_str, sizeof(fulltime_str), "%ld", (long)fulltime);
+    size_t fulltime_len = snprintf(fulltime_str, sizeof(fulltime_str), "%ld", (long)fulltime);
     if (fulltime_len >= sizeof(fulltime_str)) {
         fprintf(stderr, "Error: fulltime_str is too large.\n");
         return 1;

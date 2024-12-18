@@ -33,12 +33,14 @@ int main(int argc, char *argv[]) {
     pid_t udp;
     pid_t tcp;
 
+    // Gets current directory
     char *path = getcwd(NULL, 0);
     if (path == NULL) {
         fprintf(stderr, "Error: getcwd failed.\n");
         return 1;
     }
 
+    // Checks if GAMES directory already exists and, if not, creates it
     DIR* dir = opendir(GAMES_DIR);
     if (dir) 
         closedir(dir);
@@ -47,6 +49,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Error: failed to create GAMES directory.\n");
     }
 
+    // Checks if SCORES directory already exists and, if not, creates it
     dir = opendir(SCORES_DIR);
     if (dir) 
         closedir(dir);
@@ -55,6 +58,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Error: failed to create SCORES directory.\n");
     }
 
+    // Goes back to original directory
     int n = chdir(path);
     if (n != 0) {
         fprintf(stderr, "Error (main): failed to open directory.\n");
@@ -63,6 +67,7 @@ int main(int argc, char *argv[]) {
     }
     free(path);
 
+    // Create a child process for UDP connection
     udp = fork();
     if (udp == -1) {
         fprintf(stderr, "Error: UDP process creation failed.\n");
@@ -72,6 +77,7 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    // Create a child process for TCP connection
     tcp = fork();
     if (tcp == -1) {
         fprintf(stderr, "Error: TCP process creation failed.\n");

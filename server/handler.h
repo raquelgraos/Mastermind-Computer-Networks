@@ -27,19 +27,20 @@ int start_game(const char PLID[PLID_SIZE + 1], const char max_time[TIME_SIZE + 1
 
 
 int try_s(char **args, char **message, int n_args);
-int end_game(int time_passed, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], char mode, int nT);
 int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int time_passed, int *nW, int *nB);
-int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], int nT, char playmode[2], struct tm *endtime);
 
 int show_trials_s(char **args, char **message, int n_args);
 int assemble_fdata_st(char *file, char **fdata, int act);
 int find_last_game(char PLID[PLID_SIZE + 1], char *fname);
 
-int scoreboard_s(char **args, char **message, int n_args);
+int scoreboard_s(char **message);
 int find_top_scores(int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2]);
 int assemble_fdata_sb(char **fdata, int scores[10], char PLIDs[10][PLID_SIZE + 1], char keys[10][KEY_SIZE + 1], int nTs[10], char modes[10][2], int res);
 
 int quit_s(char **args, char **message, int n_args);
+
+int end_game(int time_passed, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], char mode, int nT);
+int write_to_scores(int score, char PLID[PLID_SIZE + 1], char key[KEY_SIZE + 1], int nT, char playmode[2], struct tm *endtime);
 
 int send_simple_message(char OP_CODE[CODE_SIZE], char *status, char **message);
 int send_end_message(char OP_CODE[CODE_SIZE + 1], char status[4], char key[KEY_SIZE + 1], char **message);
