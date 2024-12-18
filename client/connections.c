@@ -1,5 +1,16 @@
 #include "connections.h"
 
+/*
+udp_conn:
+
+Returns 0 if successful, 1 otherwise
+
+Arguments:
+ - GSIP: IP address of the machine where the GS runs
+ - GSport: port where the GS accepts requests
+ - message: message to be sent to the GS
+ - buffer: reply message from the GS
+ */
 int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
     int fd, errcode;
     ssize_t n;
@@ -35,7 +46,6 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
         return 1;
     }
 
-    
     int retries = 3; 
     int received = 0;
 
@@ -46,7 +56,6 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
             fprintf(stderr, "Send failed\n");
             continue;
         }
-        //printf("Message sent successfully! Waiting for server response\n");
 
         addrlen = sizeof(addr);
         n = recvfrom(fd, buffer_aux, sizeof(buffer_aux) - 1, 0, (struct sockaddr *)&addr, &addrlen);
@@ -54,7 +63,6 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
             fprintf(stdout, "Couldn't receive message from server. Retrying...\n");
         } else {
             buffer_aux[n] = '\0';
-            //printf("Message received successfully: %s\n", buffer_aux);
             received = 1;
             break;
         }
@@ -75,6 +83,17 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
     return 0;
 }
 
+/*
+tcp_conn:
+
+Returns 0 if successful, 1 otherwise
+
+Arguments:
+ - GSIP: IP address of the machine where the GS runs
+ - GSport: port where the GS accepts requests
+ - message: message to be sent to the GS
+ - buffer: reply message from the GS
+ */
 int tcp_conn(char *GSIP, char *GSport, char *message, char buffer[MAX_BUF_SIZE]) {
 
     int fd, errcode;
@@ -84,39 +103,45 @@ int tcp_conn(char *GSIP, char *GSport, char *message, char buffer[MAX_BUF_SIZE])
     struct sockaddr_in addr;
 
     fd = socket(AF_INET, SOCK_STREAM, 0); // TCP socket
-    if (fd == - 1) /*error*/ return 1; //exit(1);
+    if (fd == - 1) return 1;
 
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;          // IPv4
     hints.ai_socktype = SOCK_STREAM;     // TCP socket
 
     errcode = getaddrinfo(GSIP, GSport, &hints, &res);
-    if (errcode != 0) /*error*/ return 1; //exit(1);
+    if (errcode != 0) return 1;
 
     n = connect(fd, res->ai_addr, res->ai_addrlen);
-    if (n == -1) /*error*/ return 1; //exit(1);
+    if (n == -1) return 1;
 
     int msg_len = strlen(message);
     n = write(fd, message, msg_len);
-    if (n == -1) /*error*/ return 1; //exit(1);
+    if (n == -1) return 1;
 
-    //printf("message sent: %s", message);
+    // ensures all bytes are written
+    ssize_t total_bytes_written = n;
+    while (total_bytes_written < msg_len) {
+        n = write(fd, message, msg_len - total_bytes_written);
+        if (n == -1) return 1;
+        total_bytes_written += n;
+    }
 
     char *buf_ptr = buffer;
-    n = read(fd, buf_ptr, MAX_BUF_SIZE - 1); // leave space for null terminator.
-    if (n == -1) /*error*/ return 1;
+    n = read(fd, buf_ptr, MAX_BUF_SIZE - 1); // leave space for null terminator
+    if (n == -1) return 1;
 
+    // ensures all bytes are read
     ssize_t total_bytes_read = n;
     while (n != 0) {
         buf_ptr += n;
-        n = read(fd, buf_ptr, MAX_BUF_SIZE - total_bytes_read - 1); // leave space for null terminator.
-        if (n == -1) /*error*/ return 1;
+        n = read(fd, buf_ptr, MAX_BUF_SIZE - total_bytes_read - 1); // leave space for null terminator
+        if (n == -1) return 1;
         total_bytes_read += n;
     }
 
     buffer[total_bytes_read] = '\0';
 
-    //printf("message received: %s", buffer);
     freeaddrinfo(res);
     close(fd);
     return 0;

@@ -22,7 +22,7 @@
 #define FNAME_SIZE 24
 #define FSIZE_DIG 4
 #define FSIZE 2048
-#define MAX_BUF_SIZE 2090 //confirmar
+#define MAX_BUF_SIZE 2090
 
 int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]);
 int tcp_conn(char *GSIP, char *GSPORT, char *message, char buffer[MAX_BUF_SIZE]);
