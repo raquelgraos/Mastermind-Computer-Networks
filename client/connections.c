@@ -1,7 +1,8 @@
 #include "connections.h"
 
 /*
-udp_conn:
+udp_conn: establishes a UDP connection to the GS, sends a message
+and retrieves a reply.
 
 Returns 0 if successful, 1 otherwise
 
@@ -84,7 +85,8 @@ int udp_conn(char *GSIP, char *GSport, char *message, char buffer[128]) {
 }
 
 /*
-tcp_conn:
+tcp_conn: establishes a UDP connection to the GS, sends a message
+and retrieves a reply.
 
 Returns 0 if successful, 1 otherwise
 
