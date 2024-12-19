@@ -458,7 +458,7 @@ int show_trials_s(char **args, char **message, int n_args) {
 
     char OP_CODE[CODE_SIZE + 1] = "RST";
 
-    char status[4];
+    char status[6];
 
     // Validates arguments
     if (n_args == 2) {
@@ -1304,7 +1304,7 @@ Arguments:
  - fdata: file data
  - messsage: reply message (to be populated)
 */
-int send_data_message(char OP_CODE[CODE_SIZE + 1], char status[6], char fname[30], size_t fsize, char *fdata, char **message) {
+int send_data_message(char OP_CODE[CODE_SIZE + 1], char status[6], char fname[25], size_t fsize, char *fdata, char **message) {
 
     int status_len = strlen(status);
     int fname_len = strlen(fname);
@@ -1443,7 +1443,7 @@ Arguments:
  - PLID: player ID
  - fd: file descriptor (to be populated)
 */
-int open_active_game(char PLID[PLID_SIZE], int *fd) {
+int open_active_game(char PLID[PLID_SIZE + 1], int *fd) {
 
     // Prepares the filename
     char filename[ONGOING_GAME_SIZE + 1];
