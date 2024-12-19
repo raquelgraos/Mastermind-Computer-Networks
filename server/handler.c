@@ -1540,11 +1540,13 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_
     }
 
     // Opens player's current game
-    if (open_active_game(PLID, &fd)) 
+    if (open_active_game(PLID, &fd)) {
+        free(path);
         return 1;
+    }
     
     // From the game file header, gets the start time
-    char header[HEADER_SIZE + 1];
+    char header[HEADER_SIZE + 1] = {0};
     char *ptr = header;
     int n = read(fd, ptr, HEADER_SIZE - 1); // leave space for null terminator
     if (n == -1) {
@@ -1553,6 +1555,8 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_
         close(fd);
         return 1;
     }
+
+    header[n] = '\0';
 
     // Ensures all bytes are read
     ssize_t total_bytes_read = n;
@@ -1570,7 +1574,7 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_
 
     char *header_safe = strtok(header, "\n");
 
-    char max_time_str[FULLTIME_STR_SIZE];
+    char max_time_str[FULLTIME_STR_SIZE] = {0};
     
     if (sscanf(header_safe, "%*s %*s %*s %3s %*s %*s %*s %*s", max_time_str) != 1) {
         fprintf(stderr, "Error: failed to scan header.\n");
@@ -1590,12 +1594,11 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_
     time_t current_time;
     time(&current_time);
 
-    int res = 0;
-
     // Calculates how much time has passed and how much time there is left
     *time_passed = current_time - fulltime;
     *remaining_time = max_time - *time_passed;
 
+    int res = 0;
     // Maximum playtime exceeded
     if (*remaining_time <= 0)
         res = 2;
