@@ -1312,7 +1312,7 @@ int send_data_message(char OP_CODE[CODE_SIZE + 1], char status[6], char fname[25
     sprintf(fsize_str, "%lu", fsize);
     int fsize_len = strlen(fsize_str);
 
-    *message = (char *) malloc(CODE_SIZE + 1 + status_len + 1 + fname_len + 1 + fsize_len + fsize + 2 + 1);
+    *message = (char *) malloc(CODE_SIZE + 1 + status_len + 1 + fname_len + 1 + fsize_len + fsize + 2);
     if (*message == NULL) {
         fprintf(stderr, "Error: memory allocation failed.\n");
         return 1;
