@@ -239,7 +239,7 @@ int tcp_connection(char *GSport, int VERBOSE) {
                             close(newfd);
                             close(fd);
                             return 1;
-                        } //TODO
+                        }
 
                         input[n] = '\0';
                         

@@ -306,7 +306,6 @@ Arguments:
  - nB: number of correctly placed colors (to be populated)
 */
 int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int time_passed, int *nW, int *nB) {
-    //TODO we are restoring the original path only when there is no error
     
     // Gets current directory
     char *path = getcwd(NULL, 0);
@@ -361,7 +360,6 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
         close(fd);
         return 4;
     
-    // TODO
     } else if (res == 4){
         client_retry = 1; // client might not have gotten the message
     }
@@ -406,7 +404,7 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
     else ret_value = 2;
 
     if (!client_retry) {
-        char trial_str[40]; //TODO pensar no size disto
+        char trial_str[44];
         sprintf(trial_str, "T: %s %d %d %d\n", given_key, *nB, *nW, time_passed);
 
         // Goes to the end of the game file
@@ -424,10 +422,11 @@ int try_game(char PLID[PLID_SIZE + 1], char given_key[KEY_SIZE + 1], int nT, int
             free(path);
             close(fd);
             return 1;
-        } //TODO
+        }
         
-        close(fd); //TODO : e se client_retry = 1 ?
     }
+
+    close(fd);
 
     // Changes back to original directory
     int dir = chdir(path);
@@ -939,11 +938,11 @@ int end_game(int time_passed, char PLID[PLID_SIZE + 1], char *key, char mode, in
         return 1;
     }
 
-    char fdata[BUFSIZ]; // TODO tamanho temporario
+    char fdata[2049]; //WARNING
 
     // Reads game file and saves the data in fdata
     char *ptr_data = fdata;
-    ssize_t n = read(src, ptr_data, BUFSIZ - 1); // leave space for null terminator
+    ssize_t n = read(src, ptr_data, 2048); // leave space for null terminator
     if (n == -1) {
         free(path);
         close(src);
@@ -954,7 +953,7 @@ int end_game(int time_passed, char PLID[PLID_SIZE + 1], char *key, char mode, in
     ssize_t total_bytes_read = n;
     while (n != 0) {
         ptr_data += n;
-        n = read(src, ptr_data, BUFSIZ - total_bytes_read - 1); // leave space for null terminator
+        n = read(src, ptr_data, 2048 - total_bytes_read); // leave space for null terminator
         if (n == -1) {
             free(path);
             close(src);
@@ -1582,7 +1581,7 @@ int check_if_in_time(char PLID[PLID_SIZE + 1], int *time_passed, int *remaining_
 
     max_time_str[FULLTIME_STR_SIZE] = '\0';
 
-    char *fulltime_str = strrchr(header_safe, ' '); //TODO se eu podia fazer no sscanf? sim, mas nao estava a funcionar e eu estava mad <3
+    char *fulltime_str = strrchr(header_safe, ' ');
 
     int max_time = atoi(max_time_str);
     long int fulltime = strtol(fulltime_str, NULL, 10);
@@ -1668,7 +1667,7 @@ int check_repeated_or_invalid(int fd, const char given_key[KEY_SIZE + 1], int nT
     }
 
     if (is_repeated) {
-        if (nT == last_trial_number) { // TODO check relevance
+        if (nT == last_trial_number) {
             return 4;
         }
         return 2;
