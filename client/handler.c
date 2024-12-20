@@ -75,7 +75,7 @@ int start_r(char *GSIP, char *GSport, char *message) {
     if (res == 0) {
 
         if (args[1] != NULL && !strcmp(args[1], "OK")) {
-            fprintf(stdout, "Game started successfully.\n");
+            fprintf(stdout, "Starting a new game.\nYou are allowed to try 8 times for code with 4 positions, each: R,G,B,Y,O and P");
 
         } else if (args[1] != NULL && !strcmp(args[1], "NOK")) {
             fprintf(stderr, "There is already an ongoing game.\n");
