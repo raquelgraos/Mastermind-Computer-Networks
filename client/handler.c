@@ -405,8 +405,15 @@ int show_trials_r(char *GSIP, char *GSport, char *message) {
                 total_bytes_written += n;
             }
 
-            close(fd);
             fprintf(stdout, "File saved: %s (%ld bytes).\n", args[2], fsize);
+            if (display_file(fd, fsize)) {
+                for (int i = 0; args[i] != NULL; i++) free(args[i]);
+                free(args);
+                free(path);
+                return 1;
+            }
+
+            close(fd);
 
             // changes back to original directory
             dir = chdir(path);
@@ -566,7 +573,7 @@ void show_sb_r(char *GSIP, char *GSport, char *message) {
                 total_bytes_written += n;
             }
 
-            if (display_scores(fd, fsize)) {
+            if (display_file(fd, fsize)) {
                 free(path);
                 for (int i = 0; args[i] != NULL; i++) free(args[i]);
                 free(args);
@@ -588,7 +595,7 @@ void show_sb_r(char *GSIP, char *GSport, char *message) {
     free(args);
 }
 
-int display_scores(int fd, ssize_t fsize) {
+int display_file(int fd, ssize_t fsize) {
     char buffer[fsize + 1];
 
     if (lseek(fd, 0, SEEK_SET) == -1) {
@@ -596,7 +603,7 @@ int display_scores(int fd, ssize_t fsize) {
         return 1;
     }
 
-    // reads the created scoreboard file
+    // reads the created file
     int n = read(fd, buffer, fsize);
     int total_bytes_read = n;
     if (n == -1) {

@@ -68,7 +68,7 @@ Arguments:
  - buffer: the player input
  - PLID: the player ID
 */
-int parse_start_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
+int parse_start_command(char *GSIP, char *GSport, char buffer[INPUT_SIZE], char PLID[7]) {
     char *PLID_aux;
     char *max_time_str;
     
@@ -127,7 +127,7 @@ Arguments:
  - PLID: the player ID
  - n_trials: current trial number
 */
-int parse_try_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7], int n_trials) {
+int parse_try_command(char *GSIP, char *GSport, char buffer[INPUT_SIZE], char PLID[7], int n_trials) {
     char *args[5];
     char *arg;
     int i = 0;
@@ -167,7 +167,7 @@ Arguments:
  - buffer: the player input
  - PLID: the player ID
 */
-int parse_debug_command(char *GSIP, char *GSport, char buffer[BUFSIZ], char PLID[7]) {
+int parse_debug_command(char *GSIP, char *GSport, char buffer[INPUT_SIZE], char PLID[7]) {
     char *args[7];
     char *arg;
     int i = 0;

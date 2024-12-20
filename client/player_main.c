@@ -32,8 +32,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    char buffer[BUFSIZ];
-    char input[BUFSIZ];
+    char buffer[INPUT_SIZE];
+    char input[INPUT_SIZE];
     char *command_line, *command;
     int n_trials = 1;
     char PLID[7];
