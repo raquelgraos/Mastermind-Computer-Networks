@@ -1,5 +1,4 @@
-### Projeto de Redes de Computadores 24/25
+### IST - Computer Networks Project 24/25
 
-# Mastermind
-
-Desenvolvimento de uma versão simples do jogo Mastermind, através //TODO
+## Masterminnd
+This project consists of a client-server implementation of the popular game Mastermind, through socket interface
